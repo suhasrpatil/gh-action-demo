@@ -1,0 +1,106 @@
+name: Terraform Plan on PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Needed to comment on PR
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.x.x # Specify your version
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }} # Or your cloud provider's env vars
+        run: terraform plan -no-color -input=false -out=tfplan
+        working-directory: ./terraform-aws-s3-demo/
+        continue-on-error: true # Allow subsequent steps even if plan fails (e.g., to comment)
+
+      - name: Save Terraform Plan to artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: tfplan
+          if-no-files-found: ignore # Don't fail if plan didn't generate (e.g., on error)
+
+      - name: Output Terraform Plan to PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.existsSync('plan.txt') ? fs.readFileSync('plan.txt', 'utf8') : 'No plan generated or plan failed. See workflow logs for details.';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
+            });
+
+
+
+    # New Slack Notification Step using Bot Token
+      - name: Send Slack Notification on Plan Failure (using App)
+      #  if: ${{ failure() && steps.plan.outcome == 'failure' }}
+        uses: slackapi/slack-github-action@v1.23.0 # This action supports both webhooks and API methods
+        with:
+          method: chat.postMessage # <-- Specify the Slack API method
+          channel: "C097G9TNLA1" # <-- Replace with your actual channel name or ID (e.g., C1234567890)
+          payload: |
+            {
+              "text": ":x: *Terraform Plan Failed!*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *Terraform Plan Failed!*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n`${{ github.repository }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # <--- Use the new secret for the bot token
