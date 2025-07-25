@@ -1,0 +1,25 @@
+name: Hello world
+on:
+  push:
+    branches: [ "main" ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Essential for accessing your code
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Or your desired version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests (if applicable)
+        run: npm test # Or python -m unittest discover
+
+      - name: Lint code (if applicable)
+        run: npm run lint # Or flake8 .
+
