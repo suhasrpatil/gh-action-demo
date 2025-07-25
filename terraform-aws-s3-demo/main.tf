@@ -18,14 +18,14 @@ resource "aws_s3_bucket" "my_demo_bucket" {
     Name        = "GitHubActionsDemoBucket"
     Environment = "Dev"
     ManagedBy   = "Terraform"
-  }
+  },
 }
 
 resource "aws_s3_bucket_ownership_controls" "my_demo_bucket_ownership" {
   bucket = aws_s3_bucket.my_demo_bucket.id
   rule {
     object_ownership = "BucketOwnerPreferred"
-  }
+  },
 }
 
 resource "aws_s3_bucket_public_access_block" "my_demo_bucket_public_access_block" {
