@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0" # Use a compatible version of the AWS provider
+      version = "~> 5.0" 
     }
   }
 }
@@ -13,7 +13,7 @@ provider "aws" {
 
 
 resource "aws_s3_bucket" "my_demo_bucket" {
-  bucket = "suhas-github-actions-demo-bucket-2025-07-25"
+  bucket = "suhas-github-actions-demo-bucket-2025-07-25-xyz"
   tags = {
     Name        = "GitHubActionsDemoBucket"
     Environment = "Dev"
