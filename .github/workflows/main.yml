@@ -1,25 +1,31 @@
-name: Hello world
+name: Terraform Validate
+
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
+    branches:
+      - main
+
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Essential for accessing your code
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          node-version: '20' # Or your desired version
+          terraform_version: 1.7.5
 
-      - name: Install dependencies
-        run: npm install
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        # Note: '-check' prevents it from modifying files, just checks if they *need* to be formatted
 
-      - name: Run tests (if applicable)
-        run: npm test # Or python -m unittest discover
+      - name: Terraform Init
+        id: init
+        run: terraform init
 
-      - name: Lint code (if applicable)
-        run: npm run lint # Or flake8 .
-
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
