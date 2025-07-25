@@ -57,7 +57,7 @@ jobs:
 
 
 
-      # New Slack Notification Step using Bot Token
+    # New Slack Notification Step using Bot Token
       - name: Send Slack Notification on Plan Failure (using App)
         if: ${{ failure() && steps.plan.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0 # This action supports both webhooks and API methods
