@@ -10,7 +10,7 @@ module "core" {
   common_tags = local.common_tags
 
   # VPC
-  vpc_cidr = "10.237.22.0/24"
+  vpc_cidr                   = "10.237.22.0/24"
   vpc_enable_fck_nat_gateway = true
 
   # VPN
@@ -41,13 +41,13 @@ module "core" {
 
   # SNS
   create_sns_topic = true
-  sns_subscriber = data.vault_generic_secret.opsgenie.data["endpoint"]
+  sns_subscriber   = data.vault_generic_secret.opsgenie.data["endpoint"]
 
   # Backup
-  create_backup_vault   = true
+  create_backup_vault = true
 
   # Cost explorer anomaly monitor
   create_ce_anomaly_monitor = true
-  ceam_threshold_absolute   = "10"  # AND increase in $
-  ceam_threshold_percentage = "10"  # AND increase in %
+  ceam_threshold_absolute   = "10" # AND increase in $
+  ceam_threshold_percentage = "10" # AND increase in %
 }
