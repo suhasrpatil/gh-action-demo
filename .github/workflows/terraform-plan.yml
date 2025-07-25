@@ -63,7 +63,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.23.0 # This action supports both webhooks and API methods
         with:
           method: chat.postMessage # <-- Specify the Slack API method
-          channel: 'C097G9TNLA1' # <-- Replace with your actual channel name or ID (e.g., C1234567890)
+          channel: "C097G9TNLA1" # <-- Replace with your actual channel name or ID (e.g., C1234567890)
           payload: |
             {
               "text": ":x: *Terraform Plan Failed!*",
