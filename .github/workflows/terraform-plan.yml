@@ -55,15 +55,11 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-
-
-    # New Slack Notification Step using Bot Token
-      - name: Send Slack Notification on Plan Failure (using App)
-      #  if: ${{ failure() && steps.plan.outcome == 'failure' }}
-        uses: slackapi/slack-github-action@v1.23.0 # This action supports both webhooks and API methods
+      # New Slack Notification Step
+      - name: Send Slack Notification on Plan Failure
+       # if: ${{ failure() && steps.plan.outcome == 'failure' }} # <-- Condition to send notification
+        uses: slackapi/slack-github-action@v1.23.0
         with:
-          method: chat.postMessage # <-- Specify the Slack API method
-          channel: "C097G9TNLA1" # <-- Replace with your actual channel name or ID (e.g., C1234567890)
           payload: |
             {
               "text": ":x: *Terraform Plan Failed!*",
@@ -103,4 +99,54 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # <--- Use the new secret for the bot token
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # Your Slack webhook secret
+
+#
+#
+#    # New Slack Notification Step using Bot Token
+#      - name: Send Slack Notification on Plan Failure (using App)
+#      #  if: ${{ failure() && steps.plan.outcome == 'failure' }}
+#        uses: slackapi/slack-github-action@v1.23.0 # This action supports both webhooks and API methods
+#        with:
+#          method: chat.postMessage # <-- Specify the Slack API method
+#          channel: "C097G9TNLA1" # <-- Replace with your actual channel name or ID (e.g., C1234567890)
+#          payload: |
+#            {
+#              "text": ":x: *Terraform Plan Failed!*",
+#              "blocks": [
+#                {
+#                  "type": "section",
+#                  "text": {
+#                    "type": "mrkdwn",
+#                    "text": ":x: *Terraform Plan Failed!*"
+#                  }
+#                },
+#                {
+#                  "type": "section",
+#                  "fields": [
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Repository:*\n`${{ github.repository }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Commit:*\n`${{ github.sha }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+#                    }
+#                  ]
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # <--- Use the new secret for the bot token
