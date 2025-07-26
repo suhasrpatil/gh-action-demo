@@ -18,7 +18,7 @@ resource "aws_s3_bucket" "my_demo_bucket" {
     Name        = "GitHubActionsDemoBucket"
     Environment = "Dev"
     ManagedBy   = "Terraform"
-  }
+  }....
 }
 
 resource "aws_s3_bucket_ownership_controls" "my_demo_bucket_ownership" {
