@@ -7,10 +7,10 @@ terraform {
   }
 }
 
+
 provider "aws" {
   region = "eu-north-1"
 }
-
 
 resource "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
