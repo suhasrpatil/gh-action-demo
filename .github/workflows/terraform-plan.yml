@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write # Needed to comment on PR
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,7 +18,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.5
+          terraform_version: 1.x.x # Specify your version, e.g., 1.7.5
 
       - name: Terraform Init
         id: init
@@ -25,20 +26,34 @@ jobs:
         working-directory: ./terraform-aws-s3-demo/
 
       - name: Terraform Plan
-        id: plan
+        id: plan # Assign an ID to this step to reference its status later
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: terraform plan -no-color -input=false -out=tfplan
         working-directory: ./terraform-aws-s3-demo/
-        continue-on-error: true
+        continue-on-error: true # Allow subsequent steps even if plan fails
 
-      - name: Save Terraform Plan to artifact
+      - name: Read Terraform Plan Output (for PR comment)
+        id: read_plan_output
+        if: always() # Ensure this always runs to attempt to get plan output for the PR comment
+        run: |
+          # Only try to show if tfplan artifact was created
+          if [ -f tfplan ]; then
+            terraform show -no-color tfplan > plan.txt
+          else
+            # If plan failed to even produce a tfplan file (e.g., credentials error),
+            # grab the overall workflow logs.
+            echo "Terraform plan failed to generate a plan file. See workflow logs for details." > plan.txt
+          fi
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Upload Terraform Plan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
-          path: tfplan
+          path: terraform-aws-s3-demo/tfplan
           if-no-files-found: ignore
 
       - name: Output Terraform Plan to PR
@@ -47,7 +62,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const planOutput = fs.existsSync('plan.txt') ? fs.readFileSync('plan.txt', 'utf8') : 'No plan generated or plan failed. See workflow logs for details.';
+            const planOutputFilePath = 'terraform-aws-s3-demo/plan.txt';
+            const planOutput = fs.existsSync(planOutputFilePath) ? fs.readFileSync(planOutputFilePath, 'utf8') : 'Error reading plan output. See workflow logs for details.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -55,9 +71,10 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-
+      # --- Slack Notification for Failure (existing, with slight tweak) ---
       - name: Send Slack Notification on Plan Failure
-        if: ${{ failure() && steps.plan.outcome == 'failure' }} # <-- Condition to send notification
+        # Condition: The overall job has failed AND the 'plan' step specifically failed
+        if: ${{ failure() && steps.plan.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |
@@ -69,6 +86,53 @@ jobs:
                   "text": {
                     "type": "mrkdwn",
                     "text": ":x: *Terraform Plan Failed!*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n`${{ github.repository }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # --- New Slack Notification for Success ---
+      - name: Send Slack Notification on Plan Success
+        # Condition: The overall job has succeeded AND the 'plan' step specifically succeeded
+        if: ${{ success() && steps.plan.outcome == 'success' }}
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": ":white_check_mark: *Terraform Plan Succeeded!*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
                   }
                 },
                 {
