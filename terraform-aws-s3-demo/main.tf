@@ -39,7 +39,7 @@ resource "aws_s3_bucket_public_access_block" "my_demo_bucket_public_access_block
 
 
 output "bucket_name" {
-  description = "The name of the created S3 bucket"
+  description = "Demo S3 bucket"
   value       = aws_s3_bucket.my_demo_bucket.bucket
 }
 
