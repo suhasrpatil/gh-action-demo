@@ -9,7 +9,7 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write # Needed to comment on PR
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -18,7 +18,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.x.x # Specify your version, e.g., 1.7.5
+          terraform_version: 1.7.5
 
       - name: Terraform Init
         id: init
@@ -26,25 +26,23 @@ jobs:
         working-directory: ./terraform-aws-s3-demo/
 
       - name: Terraform Plan
-        id: plan # Assign an ID to this step to reference its status later
+        id: plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: terraform plan -no-color -input=false -out=tfplan
         working-directory: ./terraform-aws-s3-demo/
-        continue-on-error: true # Allow subsequent steps even if plan fails
+        continue-on-error: true
 
       - name: Read Terraform Plan Output (for PR comment)
         id: read_plan_output
-        if: always() # Ensure this always runs to attempt to get plan output for the PR comment
+        if: always()
         run: |
           # Only try to show if tfplan artifact was created
           if [ -f tfplan ]; then
             terraform show -no-color tfplan > plan.txt
           else
-            # If plan failed to even produce a tfplan file (e.g., credentials error),
-            # grab the overall workflow logs.
             echo "Terraform plan failed to generate a plan file. See workflow logs for details." > plan.txt
           fi
         working-directory: ./terraform-aws-s3-demo/
@@ -71,9 +69,8 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-      # --- Slack Notification for Failure (existing, with slight tweak) ---
+      # Slack Notification for Failure
       - name: Send Slack Notification on Plan Failure
-        # Condition: The overall job has failed AND the 'plan' step specifically failed
         if: ${{ failure() && steps.plan.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
@@ -120,7 +117,6 @@ jobs:
 
       # --- New Slack Notification for Success ---
       - name: Send Slack Notification on Plan Success
-        # Condition: The overall job has succeeded AND the 'plan' step specifically succeeded
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
