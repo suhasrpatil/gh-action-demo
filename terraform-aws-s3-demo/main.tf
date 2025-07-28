@@ -5,6 +5,13 @@ terraform {
       version = "~> 5.0"
     }
   }
+  backend "s3" {
+    bucket         = "suhas-ci-cd-terraform-state-bucket"
+    key            = "github-actions-demo/terraform.tfstate"
+    region         = "eu-north-1"
+    encrypt        = true
+    dynamodb_table = "demo-terraform-state-locking" # Create this table ONCE in Account B
+  }
 }
 
 
