@@ -10,7 +10,7 @@ terraform {
     key            = "github-actions-demo/terraform.tfstate"
     region         = "eu-north-1"
     encrypt        = true
-    dynamodb_table = "demo-terraform-state-locking" # Create this table ONCE in Account B
+    dynamodb_table = "demo-terraform-state-locking"
   }
 }
 
@@ -28,12 +28,12 @@ resource "aws_s3_bucket" "my_demo_bucket" {
   }
 }
 
-resource "aws_s3_bucket_ownership_controls" "my_demo_bucket_ownership" {
-  bucket = aws_s3_bucket.my_demo_bucket.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
+  resource "aws_s3_bucket_ownership_controls" "my_demo_bucket_ownership" {
+    bucket = aws_s3_bucket.my_demo_bucket.id
+    rule {
+      object_ownership = "BucketOwnerPreferred"
+    }
   }
-}
 
 resource "aws_s3_bucket_public_access_block" "my_demo_bucket_public_access_block" {
   bucket = aws_s3_bucket.my_demo_bucket.id
