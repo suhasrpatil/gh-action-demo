@@ -137,23 +137,18 @@ jobs:
         with:
           payload: |
             {
-              "text": "--- GitHub Actions Notification ---",
               "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "This is a *simple test* notification with a basic block."
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": ":large_green_circle: *Build succeeded* :large_green_circle:\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View details>\n\n*Developer:* ${{ github.actor }}\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit Message:* ${{ github.event.head_commit.message }}"
+                    }
+                  },
+                  {
+                    "type": "divider"
                   }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "Workflow Status: ${{ job.status }}"
-                  }
-                }
-              ]
-            }
+                ]
+             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
