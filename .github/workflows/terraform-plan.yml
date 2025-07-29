@@ -85,49 +85,48 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-      # Slack Notification for Failure
       - name: Send Slack Notification on Plan Failure
         if: ${{ failure() && steps.plan.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          payload: |
-              {
-                "text": ":x: *Terraform Plan Failed!*",
-                "blocks": [
-                  {
-                    "type": "section",
-                    "text": {
-                      "type": "mrkdwn",
-                      "text": ":x: *Terraform Plan Failed!*"
-                    }
-                  },
-                  {
-                    "type": "section",
-                    "fields": [
-                      {
-                        "type": "mrkdwn",
-                        "text": "*Repository:*\n`${{ github.repository }}`"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "*Commit:*\n`${{ github.sha }}`"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
-                      }
-                    ]
+          payload: |  # <-- This 'payload:' must be indented exactly under 'with:'
+            {            # <-- This opening brace '{' must be indented by 2 spaces relative to 'payload:'
+              "text": ":x: *Terraform Plan Failed!*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *Terraform Plan Failed!*"
                   }
-                ]
-              }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n`${{ github.repository }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                    }
+                  ]
+                }
+              ]
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
