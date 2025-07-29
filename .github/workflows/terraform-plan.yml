@@ -135,15 +135,15 @@ jobs:
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          payload: |  # <-- This 'payload:' must be indented exactly under 'with:'
-            {            # <-- This opening brace '{' must be indented by 2 spaces relative to 'payload:'
-              "text": ":x: *Terraform Plan Failed!*",
+          payload: |
+            {
+              "text": ":white_check_mark: *Terraform Plan Succeeded!*",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": ":x: *Terraform Plan Failed!*"
+                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
                   }
                 },
                 {
@@ -151,7 +151,7 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n`${{ github.repository }}`"
+                      "text": "*Repository:*\n"+${{ github.repository }}
                     },
                     {
                       "type": "mrkdwn",
