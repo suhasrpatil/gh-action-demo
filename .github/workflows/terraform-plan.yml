@@ -151,7 +151,7 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "Repository:"
+                      "text": "Repository"
                     },
                     {
                       "type": "mrkdwn",
