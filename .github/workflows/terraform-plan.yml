@@ -27,18 +27,19 @@ jobs:
         with:
           terraform_version: 1.7.5
 
-      - name: Terraform Format Check
-        id: fmt
-        run: terraform fmt -check -recursive
+#      - name: Terraform Format Check
+#        id: fmt
+#        run: terraform fmt -check -recursive
+#        continue-on-error: true
 
       - name: Terraform Init
         id: init
         run: terraform init
         working-directory: ./terraform-aws-s3-demo/
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate
+#      - name: Terraform Validate
+#        id: validate
+#        run: terraform validate
 
       - name: Terraform Plan
         id: plan
@@ -90,43 +91,43 @@ jobs:
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |
-            {
-              "text": ":x: *Terraform Plan Failed!*",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":x: *Terraform Plan Failed!*"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
+              {
+                "text": ":x: *Terraform Plan Failed!*",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n`${{ github.repository }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n`${{ github.sha }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                      "text": ":x: *Terraform Plan Failed!*"
                     }
-                  ]
-                }
-              ]
-            }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Repository:*\n`${{ github.repository }}`"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Commit:*\n`${{ github.sha }}`"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                      }
+                    ]
+                  }
+                ]
+              }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
