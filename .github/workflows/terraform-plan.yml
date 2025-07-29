@@ -137,39 +137,21 @@ jobs:
         with:
           payload: |
             {
-              "text": ":white_check_mark: *Terraform Plan Succeeded!*",
+              "text": "--- GitHub Actions Notification ---",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
+                    "text": "This is a *simple test* notification with a basic block."
                   }
                 },
                 {
                   "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "Repository"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Workflow Run:*"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Pull Request:*"
-                    }
-                  ]
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Workflow Status: ${{ job.status }}"
+                  }
                 }
               ]
             }
