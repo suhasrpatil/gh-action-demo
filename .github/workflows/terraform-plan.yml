@@ -140,7 +140,7 @@ jobs:
               "text": ":white_check_mark: *Terraform Plan Succeeded!*",
               "blocks": [
                 {
-                  "type": "section",
+                  "type": "header",
                   "text": {
                     "type": "mrkdwn",
                     "text": ":white_check_mark: *Terraform Plan Succeeded!*"
