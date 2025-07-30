@@ -154,6 +154,52 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
+      - name: Detect Drift and Send Slack Notification
+        if: always()
+        run: |
+          if grep -qE '^[[:space:]]*[-~+]' terraform-aws-s3-demo/plan.txt; then
+            echo "Drift detected"
+            echo "drift_detected=true" >> $GITHUB_ENV
+          else
+            echo "No drift detected"
+            echo "drift_detected=false" >> $GITHUB_ENV
+          fi
+
+      - name: Slack Notification on Drift Detection
+        if: env.drift_detected == 'true'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "⚠️ *Terraform Drift Detected!*",
+              "attachments": [
+                {
+                  "color": "#ecb22e",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": ":warning: *Terraform Drift Detected!* Changes are pending to apply."
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                        { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                        { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                        { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
       # ---- Slack Notification for Plan failure ------
       - name: Slack Notification on Plan Failure
         if: ${{ failure() }}
