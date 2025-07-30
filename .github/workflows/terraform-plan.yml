@@ -135,9 +135,9 @@ jobs:
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
+          channel-id: 'C097G9TNLA1'
           payload: |
             {
-              "channel": "C097G9TNLA1",
               "blocks": [
                 {
                   "type": "section",
