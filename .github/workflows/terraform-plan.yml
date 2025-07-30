@@ -165,20 +165,6 @@ jobs:
             echo "drift_detected=false" >> $GITHUB_ENV
           fi
 
-      - name: Prepare Drift Plan for Slack Message
-        if: env.drift_detected == 'true'
-        id: drift_summary
-        run: |
-          if [ -f terraform-aws-s3-demo/plan.txt ]; then
-            DRIFT_SUMMARY=$(head -c 2900 terraform-aws-s3-demo/plan.txt | sed 's/`/\\`/g')
-          else
-            DRIFT_SUMMARY="No plan.txt found."
-          fi
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          echo "$DRIFT_SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # ---- Slack Notification for Drift Detection ------
       - name: Slack Notification on Drift Detection
         if: env.drift_detected == 'true'
         uses: slackapi/slack-github-action@v1.23.0
@@ -186,7 +172,7 @@ jobs:
           channel-id: 'C097G9TNLA1'
           payload: |
             {
-              "text": "⚠️ Terraform Drift Detected!",
+              "text": "⚠️ *Terraform Drift Detected!*",
               "attachments": [
                 {
                   "color": "#ecb22e",
@@ -195,7 +181,7 @@ jobs:
                       "type": "section",
                       "text": {
                         "type": "mrkdwn",
-                        "text": ":warning: *Terraform Drift Detected!*\nChanges are pending to apply."
+                        "text": ":warning: *Terraform Drift Detected!* Changes are pending to apply."
                       }
                     },
                     {
@@ -206,13 +192,6 @@ jobs:
                         { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
                         { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
                       ]
-                    },
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": "```terraform\n${{ steps.drift_summary.outputs.summary }}\n```"
-                      }
                     }
                   ]
                 }
@@ -220,7 +199,6 @@ jobs:
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
 
       # ---- Slack Notification for Plan failure ------
       - name: Slack Notification on Plan Failure
