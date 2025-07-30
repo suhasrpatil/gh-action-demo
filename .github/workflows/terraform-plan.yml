@@ -154,7 +154,7 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-      - name: Detect Drift and Send Slack Notification
+      - name: Detect Drift
         if: always()
         run: |
           if grep -qE '^[[:space:]]*[-~+]' terraform-aws-s3-demo/plan.txt; then
@@ -165,6 +165,20 @@ jobs:
             echo "drift_detected=false" >> $GITHUB_ENV
           fi
 
+      - name: Prepare Drift Plan for Slack Message
+        if: env.drift_detected == 'true'
+        id: drift_summary
+        run: |
+          if [ -f terraform-aws-s3-demo/plan.txt ]; then
+            DRIFT_SUMMARY=$(head -c 2900 terraform-aws-s3-demo/plan.txt | sed 's/`/\\`/g')
+          else
+            DRIFT_SUMMARY="No plan.txt found."
+          fi
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$DRIFT_SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ---- Slack Notification for Drift Detection ------
       - name: Slack Notification on Drift Detection
         if: env.drift_detected == 'true'
         uses: slackapi/slack-github-action@v1.23.0
