@@ -38,7 +38,6 @@ jobs:
         with:
           status: failure
           step: fmt
-        secrets:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Terraform Init
@@ -57,8 +56,7 @@ jobs:
         with:
           status: failure
           step: validate
-        secrets:
-            SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
 
       - name: Terraform Plan
@@ -111,7 +109,6 @@ jobs:
         with:
           status: failure
           step: plan
-        secrets:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
 
@@ -121,7 +118,6 @@ jobs:
         with:
           status: success
           step: plan
-        secrets:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 #        if: ${{ success() && steps.plan.outcome == 'success' }}
 #        uses: slackapi/slack-github-action@v1.23.0
