@@ -32,7 +32,8 @@ jobs:
         run: terraform fmt -check -recursive
         continue-on-error: true
 
-      - name: Slack Notification (Format Failure)
+      # ---- Slack Notification for Format failure ------
+      - name: Slack Notification on Format Failure
         if: ${{ steps.fmt.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
@@ -76,7 +77,9 @@ jobs:
         id: validate
         run: terraform validate
 
-      - name: Slack Notification (Validation Failure)
+
+      # ---- Slack Notification for Validation failure ------
+      - name: Slack Notification on Validation Failure
         if: ${{ steps.fmt.outcome == 'failure' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
@@ -113,10 +116,6 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-#        env:
-#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} ###
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: terraform plan -no-color -input=false -out=tfplan
         working-directory: ./terraform-aws-s3-demo/
         continue-on-error: true
@@ -155,7 +154,8 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-      - name: Slack Notification (Failure)
+      # ---- Slack Notification for Plan failure ------
+      - name: Slack Notification on Plan Failure
         if: ${{ failure() }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
@@ -191,7 +191,7 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
 
-      # --- New Slack Notification for Success ------
+      # ---- Slack Notification for Plan Success ------
       - name: Send Slack Notification on Plan Success
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
