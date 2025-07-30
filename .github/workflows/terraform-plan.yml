@@ -34,7 +34,7 @@ jobs:
 
       - name: Notify on fmt failure
         if: ${{ steps.fmt.outcome == 'failure' }}
-        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml@${{ github.ref }}
+        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml
         with:
           status: failure
           step: fmt
@@ -61,10 +61,6 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-#        env:
-#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} ###
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: terraform plan -no-color -input=false -out=tfplan
         working-directory: ./terraform-aws-s3-demo/
         continue-on-error: true
@@ -119,6 +115,9 @@ jobs:
           status: success
           step: plan
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+
+
 #        if: ${{ success() && steps.plan.outcome == 'success' }}
 #        uses: slackapi/slack-github-action@v1.23.0
 #        with:
