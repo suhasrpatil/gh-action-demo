@@ -85,50 +85,86 @@ jobs:
               body: `## Terraform Plan\n\`\`\`terraform\n${planOutput}\n\`\`\`\n`
             });
 
-      - name: Send Slack Notification on Plan Failure
-        if: ${{ failure() && steps.plan.outcome == 'failure' }}
+      - name: Slack Notification (Failure)
+        if: ${{ failure() }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          payload: |  # <-- This 'payload:' must be indented exactly under 'with:'
-            {            # <-- This opening brace '{' must be indented by 2 spaces relative to 'payload:'
-              "text": ":x: *Terraform Plan Failed!*",
-              "blocks": [
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "Terraform Plan Failed!",
+              "attachments": [
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":x: *Terraform Plan Failed!*"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
+                  "color": "#e01e5a",
+                  "blocks": [
                     {
-                      "type": "mrkdwn",
-                      "text": "*Repository:*\n`${{ github.repository }}`"
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": ":x: *Terraform Plan Failed!*"
+                      }
                     },
                     {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n`${{ github.sha }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                        { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                        { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                        { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                      ]
                     }
                   ]
                 }
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+#      - name: Send Slack Notification on Plan Failure
+#        if: ${{ failure() && steps.plan.outcome == 'failure' }}
+#        uses: slackapi/slack-github-action@v1.23.0
+#        with:
+#          payload: |  # <-- This 'payload:' must be indented exactly under 'with:'
+#            {            # <-- This opening brace '{' must be indented by 2 spaces relative to 'payload:'
+#              "text": ":x: *Terraform Plan Failed!*",
+#              "blocks": [
+#                {
+#                  "type": "section",
+#                  "text": {
+#                    "type": "mrkdwn",
+#                    "text": ":x: *Terraform Plan Failed!*"
+#                  }
+#                },
+#                {
+#                  "type": "section",
+#                  "fields": [
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Repository:*\n`${{ github.repository }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Commit:*\n`${{ github.sha }}`"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+#                    },
+#                    {
+#                      "type": "mrkdwn",
+#                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
+#                    }
+#                  ]
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 
       # --- New Slack Notification for Success ------
       - name: Send Slack Notification on Plan Success
@@ -138,29 +174,39 @@ jobs:
           channel-id: 'C097G9TNLA1'
           payload: |
             {
-              "blocks": [
+              "text": "Terraform Plan Succeeded!",
+              "attachments": [
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
-                    { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
-                    { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
-                    { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                  "color": "#2eb886",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": ":white_check_mark: *Terraform Plan Succeeded!*"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                        { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                        { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                        { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                      ]
+                    }
                   ]
                 }
               ]
             }
+
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-  #          {
- #             "text": ":white_check_mark: Terraform Plan Succeeded!\n*Repository:* `${{ github.repository }}`\n*Branch:* `${{ github.head_ref || github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+
+
+
+#          {
+#             "text": ":white_check_mark: Terraform Plan Succeeded!\n*Repository:* `${{ github.repository }}`\n*Branch:* `${{ github.head_ref || github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
 #            }
 #        with:
 #          payload: |
