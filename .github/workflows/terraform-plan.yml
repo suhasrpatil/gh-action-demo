@@ -27,19 +27,54 @@ jobs:
         with:
           terraform_version: 1.7.5
 
-#      - name: Terraform Format Check
-#        id: fmt
-#        run: terraform fmt -check -recursive
-#        continue-on-error: true
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Slack Notification (Format Failure)
+        if: ${{ steps.fmt.outcome == 'failure' }}
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "Terraform Format Check Failed!",
+              "attachments": [
+                {
+                  "color": "#e01e5a",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": ":warning: *Terraform Format Check Failed!*"
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                        { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                        { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                        { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Terraform Init
         id: init
         run: terraform init
         working-directory: ./terraform-aws-s3-demo/
 
-#      - name: Terraform Validate
-#        id: validate
-#        run: terraform validate
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
 
       - name: Terraform Plan
         id: plan
@@ -120,51 +155,6 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-#      - name: Send Slack Notification on Plan Failure
-#        if: ${{ failure() && steps.plan.outcome == 'failure' }}
-#        uses: slackapi/slack-github-action@v1.23.0
-#        with:
-#          payload: |  # <-- This 'payload:' must be indented exactly under 'with:'
-#            {            # <-- This opening brace '{' must be indented by 2 spaces relative to 'payload:'
-#              "text": ":x: *Terraform Plan Failed!*",
-#              "blocks": [
-#                {
-#                  "type": "section",
-#                  "text": {
-#                    "type": "mrkdwn",
-#                    "text": ":x: *Terraform Plan Failed!*"
-#                  }
-#                },
-#                {
-#                  "type": "section",
-#                  "fields": [
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Repository:*\n`${{ github.repository }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Commit:*\n`${{ github.sha }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
-#                    }
-#                  ]
-#                }
-#              ]
-#            }
-#        env:
-#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
 
       # --- New Slack Notification for Success ------
       - name: Send Slack Notification on Plan Success
@@ -202,50 +192,3 @@ jobs:
 
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-
-
-#          {
-#             "text": ":white_check_mark: Terraform Plan Succeeded!\n*Repository:* `${{ github.repository }}`\n*Branch:* `${{ github.head_ref || github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-#            }
-#        with:
-#          payload: |
-#            {
-#              "text": ":white_check_mark: *Terraform Plan Succeeded!*",
-#              "blocks": [
-#                {
-#                  "type": "section",
-#                  "text": {
-#                    "type": "mrkdwn",
-#                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
-#                  }
-#                },
-#                {
-#                  "type": "section",
-#                  "fields": [
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Repository:*\n`${{ github.repository }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Commit:*\n`${{ github.sha }}`"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-#                    },
-#                    {
-#                      "type": "mrkdwn",
-#                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
-#                    }
-#                  ]
-#                }
-#              ]
-#            }
-#        env:
-#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
