@@ -34,7 +34,7 @@ jobs:
 
       - name: Notify on fmt failure
         if: ${{ steps.fmt.outcome == 'failure' }}
-        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml
+        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml@tf-demo
         with:
           status: failure
           step: fmt
@@ -52,7 +52,7 @@ jobs:
 
       - name: Notify on Validation Failure
         if: ${{ steps.validate.outcome == 'failure' }}
-        uses: ./.github/workflows/slack-notify.yml
+        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml@tf-demo
         with:
           status: failure
           step: validate
@@ -101,7 +101,7 @@ jobs:
 
       - name: Notify on Plan failure
         if: ${{ steps.plan.outcome == 'failure' }}
-        uses: ./.github/workflows/slack-notify.yml
+        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml@tf-demo
         with:
           status: failure
           step: plan
@@ -110,7 +110,7 @@ jobs:
 
       - name: Send Slack Notification on Plan Success
         if: ${{ steps.plan.outcome == 'success' }}
-        uses: ./.github/workflows/slack-notify.yml
+        uses: suhasrpatil/gh-action-demo/.github/workflows/slack-notify.yml@tf-demo
         with:
           status: success
           step: plan
