@@ -130,53 +130,48 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      # --- New Slack Notification for Success ----
+      # --- New Slack Notification for Success ---
       - name: Send Slack Notification on Plan Success
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          # --- New Slack Notification for Success ---
-          - name: Send Slack Notification on Plan Success
-            if: ${{ success() && steps.plan.outcome == 'success' }}
-            uses: slackapi/slack-github-action@v1.23.0
-            with:
-              payload: |
+          payload: |
+            {
+              "text": ":white_check_mark: *Terraform Plan Succeeded!*",
+              "blocks": [
                 {
-                  "text": ":white_check_mark: *Terraform Plan Succeeded!*",
-                  "blocks": [
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":white_check_mark: *Terraform Plan Succeeded!*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
                     {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": ":white_check_mark: *Terraform Plan Succeeded!*"
-                      }
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n`${{ github.repository }}`"
                     },
                     {
-                      "type": "section",
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Repository:*\n`${{ github.repository }}`"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Commit:*\n`${{ github.sha }}`"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
-                        }
-                      ]
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow Run:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Pull Request:*\n<${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}>"
                     }
                   ]
                 }
+              ]
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
