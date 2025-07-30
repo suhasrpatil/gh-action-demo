@@ -137,7 +137,7 @@ jobs:
         with:
           payload: |
             {
-              "channel": "#demo-suhas",
+              "channel": "C097G9TNLA1",
               "blocks": [
                 {
                   "type": "section",
