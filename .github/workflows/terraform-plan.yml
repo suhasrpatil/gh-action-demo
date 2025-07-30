@@ -130,7 +130,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      # --- New Slack Notification for Success ---
+      # --- New Slack Notification for Success ----
       - name: Send Slack Notification on Plan Success
         if: ${{ success() && steps.plan.outcome == 'success' }}
         uses: slackapi/slack-github-action@v1.23.0
