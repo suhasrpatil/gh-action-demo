@@ -14,3 +14,4 @@ ansible/files/*.pem
 /.idea/
 
 .terraform.lock.hcl
+terraform-aws-s3-demo/tfplan
