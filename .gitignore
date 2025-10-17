@@ -13,3 +13,4 @@
 ansible/files/*.pem
 /.idea/
 
+.terraform.lock.hcl
