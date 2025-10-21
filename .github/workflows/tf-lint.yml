@@ -23,7 +23,7 @@ jobs:
 
   linting:
     runs-on: ubuntu-latest
-    steps:  
+    steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -31,7 +31,7 @@ jobs:
         uses: terraform-linters/setup-tflint@v4
         with:
             tflint_version: v0.59.1
-      
+
       - name: Run TFLint
         run: |
             tflint --init

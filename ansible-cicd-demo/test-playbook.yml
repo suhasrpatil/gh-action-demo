@@ -7,21 +7,4 @@
   tasks:
     - name: 1. Print a simple debug message
       ansible.builtin.debug:
-        msg: "Hello! The test playbook is running."
-
-    - name: 2. Create a temporary test file
-      ansible.builtin.copy:
-        content: "This is a test file for Ansible."
-        dest: /tmp/ansible_test_file.txt
-        mode: '0644'
-      register: file_creation_result
-
-    - name: 3. Verify the file was created
-      ansible.builtin.debug:
-        msg: "File was created successfully at: {{ file_creation_result.dest }}"
-      when: file_creation_result.changed
-
-    - name: 4. Clean up the temporary file
-      ansible.builtin.file:
-        path: /tmp/ansible_test_file.txt
-        state: absent
+        msg: Hello! The test playbook is running.

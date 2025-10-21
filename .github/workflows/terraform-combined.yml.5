@@ -102,8 +102,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
-          path: ./terraform-aws-s3-demo/ 
-        continue-on-error: true 
+          path: ./terraform-aws-s3-demo/
+        continue-on-error: true
 
       - name: Setup Terraform
         if: steps.download_plan.outcome == 'success'
@@ -179,7 +179,7 @@ jobs:
         if: needs.plan.result == 'success' && env.drift_detected == 'true'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          channel-id: 'C097G9TNLA1' 
+          channel-id: 'C097G9TNLA1'
           payload: |
             {
               "text": "⚠️ *Terraform Drift Detected!*",
