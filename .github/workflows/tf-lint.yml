@@ -30,7 +30,6 @@ jobs:
             tflint_version: latest
       
       - name: Run TFLint
-        working-directory: ./terraform-aws-s3-demo/
         run: |
             tflint --init
             tflint --recursive
