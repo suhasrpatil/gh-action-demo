@@ -50,10 +50,10 @@ output "bucket_name" {
   value       = aws_s3_bucket.my_demo_bucket.bucket
 }
 
-output "bucket_arn" {
-  description = "The ARN of the created S3 bucket......"
-  value       = aws_s3_bucket.my_demo_bucket.arn
-}
+  output "bucket_arn" {
+    description = "The ARN of the created S3 bucket......"
+    value       = aws_s3_bucket.my_demo_bucket.arn
+  }
 
 # resource "aws_instance" "bad_example" {
 #   ami           = "ami-123456"
