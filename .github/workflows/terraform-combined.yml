@@ -91,7 +91,7 @@ jobs:
     if: always() # This job must always run to report success or failure
 
     permissions:
-      pull-requests: write # Required to comment on PRs
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -103,7 +103,7 @@ jobs:
         with:
           name: terraform-plan
           path: ./terraform-aws-s3-demo/ 
-        continue-on-error: true # The plan might not exist if the 'plan' job failed
+        continue-on-error: true 
 
       - name: Setup Terraform
         if: steps.download_plan.outcome == 'success'
@@ -179,7 +179,7 @@ jobs:
         if: needs.validate.result == 'failure'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          channel-id: 'C097G9TNLA1' # Replace with your Slack channel ID
+          channel-id: 'C097G9TNLA1'
           payload: |
             {
               "text": "Terraform Validation Failed!",
@@ -201,7 +201,7 @@ jobs:
         if: needs.plan.result == 'failure'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          channel-id: 'C097G9TNLA1' # Replace with your Slack channel ID
+          channel-id: 'C097G9TNLA1'
           payload: |
             {
               "text": "Terraform Plan Failed!",
@@ -223,7 +223,7 @@ jobs:
         if: needs.plan.result == 'success' && env.drift_detected == 'true'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          channel-id: 'C097G9TNLA1' # Replace with your Slack channel ID
+          channel-id: 'C097G9TNLA1' 
           payload: |
             {
               "text": "⚠️ *Terraform Drift Detected!*",
@@ -245,7 +245,7 @@ jobs:
         if: needs.plan.result == 'success' && env.drift_detected == 'false'
         uses: slackapi/slack-github-action@v1.23.0
         with:
-          channel-id: 'C097G9TNLA1' # Replace with your Slack channel ID
+          channel-id: 'C097G9TNLA1'
           payload: |
             {
               "text": "Terraform Plan Succeeded with no changes!",
