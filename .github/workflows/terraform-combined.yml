@@ -1,0 +1,264 @@
+name: Terraform Plan on PR (Multi-Stage)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Stage 1: Validate the Terraform code for formatting and syntax.
+  validate:
+    name: 'Terraform Validate'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ./terraform-aws-s3-demo/
+
+  # Stage 2: Generate the Terraform plan after validation succeeds.
+  plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+    needs: validate # This job only runs if the 'validate' job is successful.
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=tfplan
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Upload Terraform Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform-aws-s3-demo/tfplan
+          if-no-files-found: error # Fail if plan file is not created
+
+  # Stage 3: Report results to the PR and Slack.
+  report:
+    name: 'Report Plan Results'
+    runs-on: ubuntu-latest
+    needs: [validate, plan] # Depends on the previous jobs
+    if: always() # This job must always run to report success or failure
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan Artifact
+        id: download_plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: ./terraform-aws-s3-demo/ 
+        continue-on-error: true 
+
+      - name: Setup Terraform
+        if: steps.download_plan.outcome == 'success'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init (for show)
+        if: steps.download_plan.outcome == 'success'
+        run: terraform init -backend=false
+        working-directory: ./terraform-aws-s3-demo/
+
+      - name: Generate Plan Output for Comment & Drift Check
+        id: plan_output
+        if: steps.download_plan.outcome == 'success'
+        run: |
+          cd ./terraform-aws-s3-demo/
+          if [ ! -f tfplan ]; then
+            echo "Error: tfplan file not found"
+            exit 1
+          fi
+          PLAN_TEXT=$(terraform show -no-color tfplan)
+          echo "PLAN_BODY<<EOF" >> $GITHUB_ENV
+          echo "${PLAN_TEXT}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Detect Drift
+        id: detect_drift
+        if: steps.plan_output.outcome == 'success'
+        run: |
+          if echo "${{ env.PLAN_BODY }}" | grep -qE '^[[:space:]]*[-~+]'; then
+            echo "Drift detected: Plan contains changes."
+            echo "drift_detected=true" >> $GITHUB_ENV
+          else
+            echo "No drift detected: Plan is empty."
+            echo "drift_detected=false" >> $GITHUB_ENV
+          fi
+
+      - name: Build PR Comment
+        id: build_comment
+        run: |
+          # The GITHUB_ENV file is used to pass the multi-line comment body between steps
+          if [ "${{ needs.plan.result }}" == "success" ]; then
+            echo "comment<<EOF" >> $GITHUB_ENV
+            echo "## Terraform Plan ✅" >> $GITHUB_ENV
+            echo "\`\`\`terraform" >> $GITHUB_ENV
+            echo "${{ env.PLAN_BODY }}" >> $GITHUB_ENV
+            echo "\`\`\`" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          elif [ "${{ needs.validate.result }}" == "failure" ]; then
+            echo "comment=## Terraform Validation ❌\nThe \`validate\` job failed. Please check the workflow logs for details." >> $GITHUB_ENV
+          else
+            echo "comment=## Terraform Plan ❌\nThe \`plan\` job failed. Please check the workflow logs for details." >> $GITHUB_ENV
+          fi
+
+      - name: Post Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // process.env.comment is read from the GITHUB_ENV file set in the previous step
+            const commentBody = process.env.comment;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+      # --- Slack Notifications ---
+
+      - name: Slack Notification on Validation Failure
+        if: needs.validate.result == 'failure'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "Terraform Validation Failed!",
+              "attachments": [ { "color": "#e01e5a", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":warning: *Terraform Validation Failed!*" }},
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Slack Notification on Plan Failure
+        if: needs.plan.result == 'failure'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "Terraform Plan Failed!",
+              "attachments": [ { "color": "#e01e5a", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":x: *Terraform Plan Failed!*" } },
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Slack Notification on Drift Detection
+        if: needs.plan.result == 'success' && env.drift_detected == 'true'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1' 
+          payload: |
+            {
+              "text": "⚠️ *Terraform Drift Detected!*",
+              "attachments": [ { "color": "#ecb22e", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":warning: *Terraform Drift Detected!* Changes are pending." } },
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Send Slack Notification on Plan Success (No Drift)
+        if: needs.plan.result == 'success' && env.drift_detected == 'false'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: 'C097G9TNLA1'
+          payload: |
+            {
+              "text": "Terraform Plan Succeeded with no changes!",
+              "attachments": [ { "color": "#2eb886", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":white_check_mark: *Terraform Plan Succeeded!* No changes detected." } },
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ github.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ github.head_ref || github.ref_name }}`" },
+                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ github.sha }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

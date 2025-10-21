@@ -1,0 +1,88 @@
+# This workflow is designed to be called by other workflows
+name: Reusable Slack Notification
+
+on:
+  workflow_call:
+    inputs:
+      status:
+        description: 'The status of the job (success or failure)'
+        required: true
+        type: string
+      job-name:
+        description: 'The name of the job that ran (e.g., "Terraform Plan")'
+        required: true
+        type: string
+      channel-id:
+        description: 'The Slack channel ID to post to'
+        required: true
+        type: string
+      repository:
+        description: 'The repository name'
+        required: true
+        type: string
+      branch:
+        description: 'The branch name'
+        required: true
+        type: string
+      commit-sha:
+        description: 'The commit SHA'
+        required: true
+        type: string
+      workflow-run-url:
+        description: 'The URL to the workflow run'
+        required: true
+        type: string
+
+    secrets:
+      SLACK_BOT_TOKEN:
+        description: 'Slack Bot Token for sending notifications'
+        required: true
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Send a "Success" message if the input status is 'success'
+      - name: Slack Notification on Success
+        if: ${{ inputs.status == 'success' }}
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: ${{ inputs.channel-id }}
+          payload: |
+            {
+              "text": "${{ inputs.job-name }} Succeeded!",
+              "attachments": [ { "color": "#36a64f", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":white_check_mark: *${{ inputs.job-name }} Succeeded*" }},
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ inputs.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ inputs.branch }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ inputs.workflow-run-url }}|View Run>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Step 2: Send a "Failure" message if the input status is 'failure'
+      - name: Slack Notification on Failure
+        if: ${{ inputs.status == 'failure' }}
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          channel-id: ${{ inputs.channel-id }}
+          payload: |
+            {
+              "text": "${{ inputs.job-name }} Failed!",
+              "attachments": [ { "color": "#e01e5a", "blocks": [
+                  { "type": "section", "text": { "type": "mrkdwn", "text": ":warning: *${{ inputs.job-name }} Failed!*" }},
+                  { "type": "section", "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\n`${{ inputs.repository }}`" },
+                      { "type": "mrkdwn", "text": "*Branch:*\n`${{ inputs.branch }}`" },
+                      { "type": "mrkdwn", "text": "*Commit:*\n`${{ inputs.commit-sha }}`" },
+                      { "type": "mrkdwn", "text": "*Workflow:*\n<${{ inputs.workflow-run-url }}|View Logs>" }
+                    ]
+                  }
+              ] } ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
