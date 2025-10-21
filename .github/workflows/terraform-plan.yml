@@ -107,6 +107,11 @@ jobs:
         with:
           terraform_version: 1.7.5
 
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform-aws-s3-demo/
+        
       - name: Generate Plan Output for Comment & Drift Check
         id: plan_output
         if: steps.download_plan.outcome == 'success'
