@@ -96,7 +96,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Download Terraform Plan Artifact
         id: download_plan
         uses: actions/download-artifact@v4
@@ -119,6 +119,7 @@ jobs:
         id: plan_output
         if: steps.download_plan.outcome == 'success'
         run: |
+          cd ./terraform-aws-s3-demo/
           PLAN_TEXT=$(terraform show -no-color tfplan)
           # Using an environment file handles multi-line strings better
           echo "PLAN_BODY<<EOF" >> $GITHUB_ENV
