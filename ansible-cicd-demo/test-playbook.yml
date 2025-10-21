@@ -1,0 +1,10 @@
+---
+- name: Simple Test Playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: 1. Print a simple debug message
+      ansible.builtin.debug:
+        msg: Hello! The test playbook is running.
