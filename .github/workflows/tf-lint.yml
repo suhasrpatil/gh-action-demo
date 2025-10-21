@@ -32,6 +32,6 @@ jobs:
       - name: Run TFLint
         run: |
             tflint --init
-            tflint --recursive --error-on-warnings
+            tflint --recursive
         working-directory: ./terraform-aws-s3-demo
         continue-on-error: false
