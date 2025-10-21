@@ -1,0 +1,17 @@
+#  Local .terraform directories
+**/.terraform
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+**/modules/**/.terraform.lock.hcl
+
+**/.ansible/
+**/.vmr_data_*
+
+ansible/files/*.pem
+/.idea/
+
+.terraform.lock.hcl
+terraform-aws-s3-demo/tfplan

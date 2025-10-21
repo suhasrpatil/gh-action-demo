@@ -20,7 +20,6 @@ jobs:
       - name: Terraform Format Check
         id: fmt
         run: terraform fmt -check -recursive
-        # Note: '-check' prevents it from modifying files, just checks if they *need* to be formatted
 
       - name: Terraform Init
         id: init
