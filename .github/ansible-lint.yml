@@ -1,0 +1,21 @@
+name: Linting Checks Ansible
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ansible-lint
+        # This is the official action from the Ansible team
+        uses: ansible/ansible-lint@v6
+        with:
+          # This is the equivalent of your 'working-directory'
+          # It tells the linter to run against the ./ansible folder
+          inputs: ansible-lint ./ansible
