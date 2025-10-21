@@ -26,11 +26,11 @@ jobs:
     steps:  
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
-            tflint_version: v0.35.0
+            tflint_version: v0.59.1
       
       - name: Run TFLint
         run: |
