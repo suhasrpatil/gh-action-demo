@@ -21,6 +21,9 @@ jobs:
         id: fmt
         run: terraform fmt -check -recursive
 
+  linting:
+    runs-on: ubuntu-latest
+    steps:  
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
