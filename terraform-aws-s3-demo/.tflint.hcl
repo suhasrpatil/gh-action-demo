@@ -5,8 +5,7 @@ plugin "aws" {
 }
 
 config {
-#  format = "compact"
-  ignore_module = false
+  module = true
 }
 
 # AWS rules
