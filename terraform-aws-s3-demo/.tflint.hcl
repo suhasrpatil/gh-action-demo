@@ -18,7 +18,7 @@ rule "aws_s3_bucket_name" {
   enabled = true
 }
 
-# Terraform rules
+# Terraform rules.
 plugin "terraform" {
   enabled = true
   version = "0.13.0"
