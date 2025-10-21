@@ -94,6 +94,9 @@ jobs:
       pull-requests: write # Required to comment on PRs
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Download Terraform Plan Artifact
         id: download_plan
         uses: actions/download-artifact@v4
