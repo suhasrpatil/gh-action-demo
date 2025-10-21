@@ -102,6 +102,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
+          path: ./terraform-aws-s3-demo/ 
         continue-on-error: true # The plan might not exist if the 'plan' job failed
 
       - name: Setup Terraform
@@ -120,8 +121,11 @@ jobs:
         if: steps.download_plan.outcome == 'success'
         run: |
           cd ./terraform-aws-s3-demo/
+          if [ ! -f tfplan ]; then
+            echo "Error: tfplan file not found"
+            exit 1
+          fi
           PLAN_TEXT=$(terraform show -no-color tfplan)
-          # Using an environment file handles multi-line strings better
           echo "PLAN_BODY<<EOF" >> $GITHUB_ENV
           echo "${PLAN_TEXT}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
