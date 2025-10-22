@@ -1,0 +1,95 @@
+---
+atlassian_product: jira
+
+jira_add_mysql_connector: false
+jira_mysql_connector_version: '8.0.33'
+
+# Default directories
+jira_install_dir: "{{ atlassian_app_dir }}/{{ atlassian_product }}/{{ atlassian_product }}-{{ jira_version }}"
+jira_current_dir: "{{ atlassian_app_dir }}/{{ atlassian_product }}/current"
+jira_home_dir: "{{ atlassian_data_dir }}/{{ atlassian_product }}/home"
+
+# Legacy server installation
+jira_license_server: false
+
+# Include atlassian_plugins role. For dry run set <application>_install_plugins to
+# False while keeping this True
+jira_include_atlassian_plugins: true
+
+# Installs/updates plugins by default
+jira_install_plugins: true
+
+jira_plugins_download_dir: "{{ atlassian_data_dir }}/plugins/{{ atlassian_product }}"
+
+# Install oauth tokens for plugin automation automatically
+jira_install_tokens: true
+
+# Sys settings
+# Default open file descriptors
+jira_service_open_files: 8192
+
+# Default application server settings
+# These are also the defaults in template(s)
+# i.e. you can safely override only the bits that you want
+jira_server:
+  connector_port: 8080
+  connection_timeout: 20000
+  max_threads: 150
+  min_spare_threads: 25
+  jvm_minimum_memory: 1024m
+  jvm_maximum_memory: 4096m
+  code_cache_size: 1024m
+
+# Configure db connection pool application side
+# Should be set 25% more database connections than max_threads
+jira_hibernate_max_size: 75
+
+# If you use remote PostgreSQL (not installed to application server)
+# Add "version: <v number>" to your "jira_db" -block in /group_vars/<environment/configuration_jira
+
+
+# Additional Catalina arguments
+# Override in host_vars/group_vars to add startup options for JIRA service
+JIRA_JVM_SUPPORT_RECOMMENDED_ARGS: ""
+JIRA_DISABLE_NOTIFICATIONS: false
+JIRA_ENABLE_GLOBAL_HTTP_PROXY: false
+JIRA_ENABLE_GLOBAL_IMAP_PROXY: false
+JIRA_HTTP_NON_PROXY_HOSTS: "{{ proxies.no_proxy | default('localhost,127.0.0.1') }}"
+
+# Disable plugin upload via Atlassian Unified Plugin Manager. Note: Will break atlassian_plugins role implementation if set to true.
+JIRA_UPM_DISABLE_UPLOAD: false
+
+# Enable dark feature public.access.disabled by default
+jira_disable_public_access: true
+
+# Server.xml connector arguments
+JIRA_ENABLE_ACCESS_VIA_LOCAL_CONNECTOR: false
+
+# Unattended upgrade process options
+jira_upgrade_sql_backup: true
+jira_upgrade_sql_backup_dir: "{{ atlassian_data_dir }}/{{ atlassian_product }}/ansible_sql_backups"
+jira_upgrade_start_service_automatically: true
+
+# Insert parameters into jira-config.properties
+jira_config_properties:
+  jira.maximum.authentication.attempts.allowed: 20
+  jira.websudo.is.disabled: false
+  atlassian.upm.server.data.disable: true
+  jira.index.issue.threads: 10
+
+# List of files that are customized inside Jira binaries directory
+# These will be copied over from earlier insllation when upgrading
+# Use paths relative to installation directory!
+jira_customized_files: []
+jira_context_path: /
+
+# Define log path
+jira_log_path: "{{ jira_install_dir }}/logs"
+# Define log4j2.xml path
+jira_log4j2_path: "{{ jira_install_dir }}/atlassian-jira/WEB-INF/classes/log4j2.xml"
+
+# Define local plugin path
+jira_local_plugin_path: "{{ jira_home_dir }}/plugins"
+
+# Variable for clearing caches
+jira_clear_caches: false

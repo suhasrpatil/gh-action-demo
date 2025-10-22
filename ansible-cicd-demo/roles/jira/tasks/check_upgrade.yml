@@ -1,0 +1,92 @@
+---
+- name: Check if JIRA is already installed in {{ jira_current_dir }}
+  ansible.builtin.stat:
+    path: "{{ jira_current_dir }}/bin"
+  register: check_currentdir
+
+- name: Check if target version already exists in {{ jira_install_dir }}
+  ansible.builtin.stat:
+    path: "{{ jira_install_dir }}/bin"
+  register: check_bindir
+
+- name: Set fact installed to true
+  ansible.builtin.set_fact:
+    installed: true
+  when: (check_currentdir.stat.isdir is defined and check_currentdir.stat.isdir) or (check_currentdir.stat.islnk is defined and check_currentdir.stat.islnk)
+
+- name: Check if upgrade is required
+  when: installed
+  block:
+    - name: Read current version of JIRA # noqa risky-shell-pipe
+      ansible.builtin.shell: "grep ^version {{ jira_current_dir }}/atlassian-jira/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties|cut -d'=' -f2"
+      register: current_version
+      changed_when: false
+      check_mode: false
+
+    - name: Set fact upgrading to true
+      ansible.builtin.set_fact:
+        upgrading: true
+      when: jira_version is version(current_version.stdout, '>')
+
+    - name: Downgrade not supported message
+      when: jira_version is version(current_version.stdout, '<')
+      block:
+        - name: Downgrade is not supported
+          ansible.builtin.debug:
+            msg: "Requested version {{ jira_version }} is older than current version {{ current_version.stdout }}. This deployment does not support downgrade, please perform manually. Terminating."
+        - name: End play
+          ansible.builtin.meta: end_play
+
+    - name: Check if JIRA is already up-to-date
+      ansible.builtin.debug:
+        msg: "JIRA is already up-to-date. Skipping installation steps and performing configuration only."
+      when: not upgrading
+
+    - name: Populate service facts
+      ansible.builtin.service_facts:
+      when: upgrading
+
+    - name: Check if JIRA is running
+      ansible.builtin.set_fact:
+        running: true
+      when: upgrading and (ansible_facts.services['jira.service'].state == "running" or ansible_facts.services['jira'].state == "running")
+      ignore_errors: true
+      register: check_service
+
+- name: Service error message
+  ansible.builtin.pause:
+    prompt: "Unable to determine service state. Ensure service is stopped and then press Return to continue or Ctrl+C and then 'A' to abort the deployment."
+  when: check_service is failed
+
+- name: Read JIRA PID # noqa command-instead-of-shell
+  ansible.builtin.shell: "cat {{ jira_current_dir }}/work/catalina.pid"
+  when: running
+  register: pidfile
+  changed_when: false
+
+- name: Check if JSM is present when upgrading
+  when: upgrading
+  block:
+    - name: Read jira.shared.home from cluster.properties (if exists) # noqa no-changed-when
+      ansible.builtin.command: "grep -e ^jira.shared.home {{ jira_home_dir }}/cluster.properties"
+      register: cluster_properties
+    - name: Set plugin_path for a cluster
+      ansible.builtin.set_fact:
+        plugin_path: "{{ cluster_properties.stdout.split('=')[1] | trim }}/plugins/installed-plugins"
+  rescue:
+    - name: Set plugin_path for a single node
+      ansible.builtin.set_fact:
+        plugin_path: "{{ jira_home_dir }}/plugins/installed-plugins"
+  always:
+    - name: Check if Jira Service Management jar is present on target system
+      ansible.builtin.stat:
+        path: "{{ plugin_path }}/jira-servicedesk-application-{{ naive_jsm_version_guess }}.jar"
+      vars:
+        jira_major: "{{ current_version.stdout.split('.')[0] }}"
+        jira_minor: "{{ current_version.stdout.split('.', 1)[1] }}"
+        naive_jsm_version_guess: "{{ jira_major | int - 4 }}.{{ jira_minor }}"
+      register: check_servicedesk_jar
+    - name: Set fact jsm_installed to true if application was found
+      ansible.builtin.set_fact:
+        jsm_installed: true
+      when: check_servicedesk_jar.stat.exists is defined and check_servicedesk_jar.stat.exists

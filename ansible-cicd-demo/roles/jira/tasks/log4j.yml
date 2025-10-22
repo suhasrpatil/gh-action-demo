@@ -1,0 +1,33 @@
+---
+- name: log4j | Insert to UDP syslog reception
+  ansible.builtin.blockinfile:
+    marker: "## {mark} UDP syslog reception"
+    path: /etc/rsyslog.conf
+    insertafter: "# provides UDP syslog reception"
+    block: |
+      $ModLoad imudp
+      $UDPServerRun 514
+  when: JIRA_SYSLOG is true
+
+- name: log4j | Insert to rsyslog facility
+  ansible.builtin.blockinfile:
+    marker: "## {mark} rsyslog local5"
+    path: /etc/rsyslog.conf
+    insertafter: "# provides UDP syslog reception"
+    block: |
+      {{ FACILITIES | default('local5.*') }}                        {{ JIRA_UDP_LOCATION | default('/var/log/jira.log') }}
+  when: JIRA_SYSLOG is true
+
+- name: log4j | Remove rsyslog facility
+  ansible.builtin.blockinfile:
+    path: /etc/rsyslog.conf
+    marker: "## {mark} rsyslog local5"
+    block: ""
+  when: JIRA_SYSLOG is false
+
+- name: log4j | Remove UDP syslog reception
+  ansible.builtin.blockinfile:
+    path: /etc/rsyslog.conf
+    marker: "## {mark} UDP syslog reception"
+    block: ""
+  when: JIRA_SYSLOG is false

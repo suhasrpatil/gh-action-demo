@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: Eficode Root
+  namespace: eficode_root
+  role_name: jira
+  description: Jira role for Eficode Root
+  company: Eficode Oy
+  min_ansible_version: "2.15"
+  license: Proprietary
+dependencies:
+  - src: ssh://git@git.dev.eficode.io/efrag/dbutility-role.git
+    scm: git
+    name: dbutility
+  - src: ssh://git@git.dev.eficode.io/efrag/atlassian_plugins-role.git
+    scm: git
+    name: atlassian_plugins

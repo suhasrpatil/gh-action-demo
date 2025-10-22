@@ -1,0 +1,14 @@
+[Unit]
+Description=Jira Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User=jira
+Environment=JRE_HOME={{ jira_jre_home }}
+LimitNOFILE={{ jira_service_open_files|default('8192') }}
+ExecStart={{ jira_current_dir }}/bin/start-jira.sh
+ExecStop={{ jira_current_dir }}/bin/stop-jira.sh
+
+[Install]
+WantedBy=multi-user.target
