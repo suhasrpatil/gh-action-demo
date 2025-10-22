@@ -1,0 +1,36 @@
+---
+- hosts: jira
+  become: true
+
+  roles:
+#    - java
+#    - postfix
+    - jira
+
+  tasks:
+    - name: Enable Deploying Velocity templates without a restart
+      ansible.builtin.lineinfile:
+        dest: /opt/atlassian/jira/current/atlassian-jira/WEB-INF/classes/velocity.properties
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^class.resource.loader.cache=true', line: '#class.resource.loader.cache=true' }
+        - { regexp: '^#class.resource.loader.cache=false', line: 'class.resource.loader.cache=false' }
+        - { regexp: '^#velocimacro.library.autoreload=true', line: 'velocimacro.library.autoreload=true' }
+
+    - name: Copy releasenotes-with-IssueConclusion-html.vm file to install folder
+      ansible.builtin.copy:
+        src: files/releasenotes-with-IssueConclusion-html.vm
+        dest: /opt/atlassian/jira/current/atlassian-jira/WEB-INF/classes/templates/jira/project/releasenotes/
+        owner: jira
+        group: jira
+        mode: '0644'
+
+    - name: Copy releasenotes-with-IssueConclusion-text.vm file to install folder
+      ansible.builtin.copy:
+        src: files/releasenotes-with-IssueConclusion-text.vm
+        dest: /opt/atlassian/jira/current/atlassian-jira/WEB-INF/classes/templates/jira/project/releasenotes/
+        owner: jira
+        group: jira
+        mode: '0644'
+
