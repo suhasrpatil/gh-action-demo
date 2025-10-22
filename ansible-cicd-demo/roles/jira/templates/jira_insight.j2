@@ -1,0 +1,69 @@
+{{ atlassian_data_dir }}/jira/home/log/insight_workflow.log {
+  daily
+  rotate 30
+  dateext
+  dateformat .%Y-%m-%d
+  renamecopy
+  missingok
+  notifempty
+  compress
+  delaycompress
+  su jira jira
+  create 640 jira jira
+}
+
+{{ atlassian_data_dir }}/jira/home/log/insight_audit.log {
+  daily
+  rotate 30
+  dateext
+  dateformat .%Y-%m-%d
+  renamecopy
+  missingok
+  notifempty
+  compress
+  delaycompress
+  su jira jira
+  create 640 jira jira
+}
+
+{{ atlassian_data_dir }}/jira/home/log/insight_automation.log {
+  daily
+  rotate 30
+  dateext
+  dateformat .%Y-%m-%d
+  renamecopy
+  missingok
+  notifempty
+  compress
+  delaycompress
+  su jira jira
+  create 640 jira jira
+}
+
+{{ atlassian_data_dir }}/jira/home/log/insight_import.log {
+  daily
+  rotate 30
+  dateext
+  dateformat .%Y-%m-%d
+  renamecopy
+  missingok
+  notifempty
+  compress
+  delaycompress
+  su jira jira
+  create 640 jira jira
+}
+
+{{ atlassian_data_dir }}/jira/home/log/insight_objectschema_export.log {
+  daily
+  rotate 30
+  dateext
+  dateformat .%Y-%m-%d
+  renamecopy
+  missingok
+  notifempty
+  compress
+  delaycompress
+  su jira jira
+  create 640 jira jira
+}

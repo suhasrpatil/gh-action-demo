@@ -1,0 +1,11 @@
+# To enable X-Forwarded-For -header extraction in Jira, you need to speficy a regular expression to match the IP's where XFF header is allowed to come
+# Following example regular expression allows XFF from networks 10.168.61.64/27 & 10.168.61.96/27, so effectively 10.168.61.64-192.168.61.126
+JIRA_XFORWARDED_FOR_VALVE_IP_PROXY: "10\\.168\\.61\\.(1[0-1][0-9]|12[0-6]|6[4-9]|[7-9][0-9])"
+
+# By default, 10/8, 192.168/16, 169.254/16, 127/8, 100.64/10, 172.16/12, and ::1 are allowed.
+
+# To describe the regular expression further, it checks for ip that starts with 10.168.61. the rest goes like this
+# 1[0-1][0-9] matches numbers 100 - 119
+# 12[0-6] matches 120 - 126
+# 6[4-9] matches 64 - 69
+# [7-9][0-9] matches 70 - 99
