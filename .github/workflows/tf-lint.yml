@@ -21,6 +21,12 @@ jobs:
         id: fmt
         run: terraform fmt -check -recursive
 
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ./terraform-aws-s3-demo/
+
+
   linting:
     runs-on: ubuntu-latest
     steps:
