@@ -19,10 +19,10 @@ provider "aws" {
   region == "eu-north-1"
 }
 
-resoure "aws_s3_bucket" "my_demo_bucket" {
+resource "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
   tags = {
-    Name        = "GitHubActionsDemoBucket1"
+    //Name        = "GitHubActionsDemoBucket1"
     Environment = "Dev"
     ManagedBy   = "Terraform"
   }
