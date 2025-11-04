@@ -16,13 +16,13 @@ terraform {
 
 
 provider "aws" {
-  region == "eu-north-1"
+  region = "eu-north-1"
 }
 
 resource "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
   tags = {
-    //Name        = "GitHubActionsDemoBucket1"
+    Name        = "GitHubActionsDemoBucket1"
     Environment = "Dev"
     ManagedBy   = "Terraform"
   }
@@ -42,7 +42,7 @@ resource "aws_s3_bucket_public_access_block" "my_demo_bucket_public_access_block
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
+
 
 
 output "bucket_name" {
@@ -50,10 +50,10 @@ output "bucket_name" {
   value       = aws_s3_bucket.my_demo_bucket.bucket
 }
 
-output "bucket_arn" {
-  description = "The ARN of the created S3 bucket......"
-  value       = aws_s3_bucket.my_demo_bucket.arn
-}
+      output "bucket_arn" {
+        description = "The ARN of the created S3 bucket......"
+        value       = aws_s3_bucket.my_demo_bucket.arn
+      }
 
 # resource "aws_instance" "bad_example" {
 #   ami           = "ami-123456"
