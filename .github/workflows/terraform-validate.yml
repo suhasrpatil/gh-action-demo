@@ -27,7 +27,8 @@ jobs:
 
       - name: Terraform Validate
         id: validate
-        run: terraform validate
+        run: terraform validate -no-color
+        working-directory: ./terraform-aws-s3-demo/
 
   notify-on-success:
     runs-on: ubuntu-latest
