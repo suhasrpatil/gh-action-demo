@@ -19,7 +19,7 @@ provider "aws" {
   region == "eu-north-1"
 }
 
-resource "aws_s3_bucket" "my_demo_bucket" {
+resoure "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
   tags = {
     Name        = "GitHubActionsDemoBucket1"
