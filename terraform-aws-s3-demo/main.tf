@@ -21,7 +21,7 @@ provider "aws" {
 
 resource "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
-#  acl    = "private"  validation error
+  #  acl    = "private"  validation error
   tags = {
     Name        = "GitHubActionsDemoBucket1"
     Environment = "Dev"
