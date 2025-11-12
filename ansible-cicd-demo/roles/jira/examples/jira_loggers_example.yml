@@ -1,0 +1,11 @@
+# Define custom logging levels for packages in log4j2.xml with **jira_loggers**:
+jira_loggers:
+  - name: com.example.pkg
+    level: WARN
+
+# Role supports adding new elements
+# For new elements, additivity and AppenderRef (default: console) can optionally be specified.
+  - name: com.another.example.pkg
+    level: ERROR
+    additivity: true
+    ref: filelog

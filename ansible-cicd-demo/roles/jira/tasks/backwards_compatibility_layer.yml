@@ -1,0 +1,21 @@
+- name: Warning for deprecated variable
+  ansible.builtin.pause:
+    prompt: |
+      Your configuration profile contains jira_datacenter variable with the value of "{{ jira_datacenter }}". This variable is deprecated.
+
+      This deployment defaults to Data Center variant.
+
+      To force use of "Server" type packages for plugins, add variable jira_license_server to true.
+
+      Press return to continue.
+  when: jira_datacenter is defined
+
+- name: Clarification
+  block:
+    - name: Statement of a fact
+      ansible.builtin.debug:
+        msg: "This deployment will install {{ (jira_license_server) | ternary('SERVER', 'DATA CENTER') }} versions of plugins."
+      changed_when: true
+    - name: Sleep for 3 seconds and then continue the deployment
+      ansible.builtin.wait_for:
+        timeout: 3

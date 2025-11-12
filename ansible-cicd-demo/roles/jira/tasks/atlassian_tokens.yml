@@ -1,0 +1,45 @@
+---
+- name: Check that role exists
+  ansible.builtin.stat:
+    path: "{{ lookup('env', 'HOME') }}/.ansible/collections/ansible_collections/root/atlassian_oauth"
+  register: oauth_collection
+  delegate_to: localhost
+  become: false
+  tags:
+    - atlassian_oauth
+    - atlassian_tokens
+
+- name: Verify Vault data
+  block:
+    - name: Check if expected credentials are present in Vault
+      ansible.builtin.assert:
+        that:
+          - lookup('vars', atlassian_product + '_secrets').admin_user is defined
+          - lookup('vars', atlassian_product + '_secrets').admin_password is defined
+  rescue:
+    - name: Skip tokens
+      ansible.builtin.set_fact:
+        jira_install_tokens: false
+    - name: Print warning
+      ansible.builtin.debug:
+        msg: "Unable to find 'admin_user' and/or 'admin_password' in Vault data. Skipping OAUTH token autocreation. Plugin automation might not work."
+      changed_when: true
+    - name: Sleep 5 seconds and then continue the deployment
+      ansible.builtin.wait_for:
+        timeout: 5
+
+- name: Attempt to install tokens
+  block:
+    - name: Install tokens
+      ansible.builtin.include_role:
+        name: root.atlassian_oauth.create_token
+      when:
+        - oauth_collection.stat.exists
+        - jira_install_tokens
+      tags:
+        - atlassian_oauth
+        - atlassian_tokens
+  rescue:
+    - name: Print a warning
+      ansible.builtin.pause:
+        prompt: 'Automated creation of Atlassian Oauth tokens failed. Plugin automation might not work correctly. Press return to continue and try anyway.'

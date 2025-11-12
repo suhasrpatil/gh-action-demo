@@ -1,0 +1,140 @@
+---
+- name: Create application configuration files from templates
+  ansible.builtin.template:
+    src: "{{ item.template }}"
+    dest: "{{ jira_install_dir }}/{{ item.target }}"
+    owner: jira
+    group: jira
+    mode: "0644"
+  with_items:
+    - { template: "setenv.sh.j2", target: "bin/setenv.sh" }
+    - { template: "server.xml.j2", target: "conf/server.xml" }
+
+- name: Create jira-config.properties file from template
+  ansible.builtin.template:
+    src: "jira-config.properties.j2"
+    dest: "{{ jira_home_dir }}/jira-config.properties"
+    owner: jira
+    group: jira
+    mode: "0644"
+  when: jira_config_properties is defined
+
+- name: Ensure application user is set in user.sh
+  ansible.builtin.lineinfile:
+    dest: "{{ jira_install_dir }}/bin/user.sh"
+    regexp: "^JIRA_USER.*"
+    line: "JIRA_USER=\"jira\""
+
+- name: Ensure application home directory is set in jira-application.properties
+  ansible.builtin.lineinfile:
+    dest: "{{ jira_install_dir }}/atlassian-jira/WEB-INF/classes/jira-application.properties"
+    regexp: "^jira.home.*"
+    line: "jira.home = {{ jira_home_dir }}"
+
+- name: Update session cookie timeout (if defined differently than bundled)
+  community.general.xml:
+    path: "{{ item.path }}"
+    xpath: /m:web-app/m:session-config/m:session-timeout
+    value: "{{ jira_session_cookie_timeout }}"
+    namespaces:
+      m: "{{ item.namespace }}"
+  when: (jira_session_cookie_timeout is defined) and (jira_session_cookie_timeout|string|length > 0)
+  with_items:
+    - { path: "{{ jira_install_dir }}/conf/web.xml", namespace: "http://xmlns.jcp.org/xml/ns/javaee" }
+    - { path: "{{ jira_install_dir }}/atlassian-jira/WEB-INF/web.xml", namespace: "http://java.sun.com/xml/ns/javaee" }
+
+- name: Update remember-me cookie timeout (if defined differently than bundled)
+  ansible.builtin.blockinfile:
+    dest: "{{ jira_install_dir }}/atlassian-jira/WEB-INF/classes/seraph-config.xml"
+    insertbefore: ".*</parameters>$"
+    block: |
+        <!-- session-timeout -->
+        <init-param>
+            <param-name>autologin.cookie.age</param-name>
+            <param-value>{{ jira_rememberme_cookie_timeout }}</param-value>
+        </init-param>
+  when: (jira_rememberme_cookie_timeout is defined) and (jira_rememberme_cookie_timeout|string|length > 0)
+
+- name: Construct jira log dir if custom path
+  ansible.builtin.set_fact:
+    jira_log_path: "{{ jira_log_path }}/{{ jira_version }}/logs"
+  when: jira_log_path != jira_install_dir+'/logs'
+
+- name: Check if log folder is symlink
+  ansible.builtin.stat:
+    path: "{{ jira_install_dir }}/logs"
+  register: orig_log_folder
+
+- name: Check if log folder is empty
+  ansible.builtin.find:
+    paths: "{{ jira_install_dir }}/logs/"
+  register: files_found
+
+- name: Create folder
+  ansible.builtin.file:
+    path: "{{ jira_log_path }}/old_logs"
+    state: directory
+    mode: "0755"
+    owner: jira
+    group: jira
+  when: orig_log_folder.stat.isdir and files_found.matched > 0 and jira_log_path != jira_install_dir+'/logs'
+
+- name: Move old logs # noqa no-changed-when
+  ansible.builtin.shell: mv {{ jira_install_dir }}/logs/* {{ jira_log_path }}/old_logs
+  when: orig_log_folder.stat.isdir and files_found.matched > 0 and jira_log_path != jira_install_dir+'/logs'
+
+- name: Check if custom logdir already exists
+  ansible.builtin.stat:
+    path: "{{ jira_log_path }}"
+  register: logfolder
+
+- name: Create folders
+  ansible.builtin.file:
+    path: "{{ jira_log_path }}"
+    state: directory
+    mode: "0755"
+  when: not logfolder.stat.exists and jira_log_path != jira_install_dir+'/logs'
+
+- name: Delete log directory
+  ansible.builtin.file:
+    state: absent
+    path: "{{ jira_install_dir }}/logs"
+  when: (orig_log_folder.stat.isdir or not logfolder.stat.exists) and jira_log_path != jira_install_dir+'/logs'
+
+- name: Create a symlink
+  ansible.builtin.file:
+    src: "{{ jira_log_path }}"
+    dest: "{{ jira_install_dir }}/logs"
+    owner: jira
+    group: jira
+    state: link
+  when: (orig_log_folder.stat.isdir and jira_log_path != jira_install_dir+'/logs') or (not logfolder.stat.exists and jira_log_path != jira_install_dir+'/logs')
+
+- name: Check that the dbconfig.xml exists
+  ansible.builtin.stat:
+    path: "{{ jira_home_dir }}/dbconfig.xml"
+  register: jira_dbconfig_cfg
+
+- name: Change size for database connection pool
+  ansible.builtin.replace:
+    path: "{{ jira_home_dir }}/dbconfig.xml"
+    after: 'pool-max-size>'
+    before: '<'
+    regexp: '^(.+)$'
+    replace: '{{ jira_hibernate_max_size }}'
+  when: jira_dbconfig_cfg.stat.exists
+
+- name: Clear plugin caches
+  ansible.builtin.file:
+    state: absent
+    path: "{{ jira_local_plugin_path }}/{{ item }}"
+  loop:
+    - .bundled-plugins
+    - .osgi-plugins
+  when: upgrading or jira_clear_caches
+
+- name: Restart jira (if update log path)
+  ansible.builtin.systemd:
+    state: restarted
+    name: jira
+  when: (orig_log_folder.stat.isdir and jira_log_path != jira_install_dir+'/logs') or not logfolder.stat.exists

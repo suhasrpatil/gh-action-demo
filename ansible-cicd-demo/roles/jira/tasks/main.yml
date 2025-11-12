@@ -1,0 +1,211 @@
+---
+- name: Ensure correct version of Ansible is used
+  ansible.builtin.assert:
+    quiet: true
+    that: "ansible_version.full is version('{{ jira_required_ansible_version }}', '>=')"
+    msg: "Please use Ansible {{ jira_required_ansible_version }} or later"
+
+- name: Import backwards compatibility layer tasks
+  ansible.builtin.import_tasks: backwards_compatibility_layer.yml
+
+- name: Initialize Version Manager for ROOT
+  ansible.builtin.include_role:
+    name: vmr
+    tasks_from: run
+    public: true
+  vars:
+    vmr_patchlevel: "{{ patchlevel | default('') }}"
+    vmr_application: "{{ vmr_application_name }}"
+
+- name: Set jira_version from VMR if it is not defined in local profile
+  ansible.builtin.set_fact:
+    jira_version: "{{ vmr_version_data.application.version }}"
+  when: jira_version is not defined
+
+- name: Ensure that target Jira version is supported
+  ansible.builtin.assert:
+    quiet: true
+    that: "jira_version is version('9.5', '>=')"
+    msg: "This version of Ansible role supports Jira 9.5.x or later"
+
+- name: Assert that the requested application version can be used with a server license
+  ansible.builtin.assert:
+    quiet: true
+    that: "jira_version is version('9.13', '<')"
+    msg: "Requested version {{ jira_version }} is not compatible with a Server license. Server license supports versions up to 9.12.x."
+  when: jira_license_server
+
+- name: Install and configure Java
+  when: not skip_autojava | default(false) | bool
+  block:
+    - name: Run Java installation
+      ansible.builtin.include_role:
+        name: java
+        tasks_from: inline_install
+      vars:
+        java_instruction: "{{ vmr_java_instruction }}"
+      when: not skip_java_install | default(false) | bool
+    - name: Set Java home to VMR provided one
+      ansible.builtin.set_fact:
+        jira_jre_home: "{{ vmr_java_home }}"
+
+- name: Ensure that mandatory variables are defined
+  ansible.builtin.assert:
+    quiet: true
+    that: "{{ item }} is defined"
+    msg: "Please define {{ item }} variable"
+  loop: "{{ jira_mandatory_vars | flatten(levels=1) }}"
+
+- name: Include prepare tasks
+  ansible.builtin.include_tasks: prepare.yml
+- name: Include prepare plugins tasks
+  ansible.builtin.include_tasks: prepare_plugins.yml
+  run_once: true
+  when:
+    - jira_include_atlassian_plugins|bool
+    - jira_plugins|default([]) | length > 0
+- name: Include check upgrade tasks
+  ansible.builtin.include_tasks: check_upgrade.yml
+- name: Include install or upgrade tasks
+  ansible.builtin.include_tasks: install_or_upgrade.yml
+- name: Include configure tasks
+  ansible.builtin.include_tasks: configure.yml
+- name: Include log4j tasks
+  ansible.builtin.include_tasks: log4j.yml
+  when: JIRA_SYSLOG is defined
+- name: Include log4j2 tasks
+  ansible.builtin.include_tasks: log4j2.yml
+  when: jira_loggers is defined
+
+- name: Create systemd service script from template
+  ansible.builtin.template:
+    src: jira.service.j2
+    dest: /etc/systemd/system/jira.service
+    owner: root
+    mode: "0644"
+  when: ansible_service_mgr == "systemd"
+  register: service_script
+
+- name: Set open file descriptors (soft) to limits.conf
+  community.general.pam_limits:
+    domain: jira
+    limit_type: soft
+    limit_item: nofile
+    value: "{{ jira_service_open_files | default('8192') }}"
+
+- name: Set open file descriptors (hard) to limits.conf
+  community.general.pam_limits:
+    domain: jira
+    limit_type: hard
+    limit_item: nofile
+    value: "{{ jira_service_open_files | default('8192') }}"
+
+- name: Reload systemd services if script changed # noqa no-handler
+  ansible.builtin.systemd:
+    name: jira
+    daemon_reload: true
+  when: service_script.changed
+
+- name: Enable JIRA service
+  ansible.builtin.service:
+    name: jira
+    enabled: "{{ jira_service_enabled | default(true) | bool }}"
+
+- name: Automatically start service after upgrade (unless explicitly disabled)
+  ansible.builtin.service:
+    name: jira
+    state: started
+  run_once: true
+  when: upgrading and jira_upgrade_start_service_automatically|default(true)
+
+- name: Close VMR
+  ansible.builtin.include_role:
+    name: vmr
+    tasks_from: end
+  vars:
+    vmr_application: "{{ vmr_application_name }}"
+
+- name: Set base URL
+  ansible.builtin.set_fact:
+    jira_base_url: "{{ 'https://' + lookup('vars', atlassian_product + '_proxy_name') }}"
+  run_once: true
+  when: not lookup('vars', atlassian_product + '_context_path') | length > 1
+
+- name: Set base URL when using context path
+  ansible.builtin.set_fact:
+    jira_base_url: "{{ 'https://' + lookup('vars', atlassian_product + '_proxy_name') + lookup('vars', atlassian_product + '_context_path') | regex_replace('\\/$', '') }}"
+  run_once: true
+  when: lookup('vars', atlassian_product + '_context_path') | length > 1
+
+- name: Install logrotate for Jira insight
+  ansible.builtin.include_tasks: logrotate.yml
+
+- name: Continue to plugins only after application is up
+  when: jira_include_atlassian_plugins|bool
+  run_once: true
+  block:
+    - name: Wait until Jira is available
+      ansible.builtin.uri:
+        url: "{{ lookup('vars', atlassian_product + '_base_url') }}/status"
+        return_content: true
+      register: service_status
+      until:
+        - service_status.json is defined
+        - service_status.json.state is defined
+        - service_status.json.state == "RUNNING"
+      retries: 60
+      delay: 5
+      become: false
+      when: jira_include_atlassian_plugins|bool
+  rescue:
+    - name: Prompt to continue
+      ansible.builtin.pause:
+        prompt: |
+          Application startup seems to be taking a while.
+
+          Press return to confirm that the application has started up correctly.
+
+- name: Advise on JSM
+  when:
+    - jsm_installed
+    - upgrading
+  ansible.builtin.pause: # noqa jinja[spacing]
+    prompt: |
+      ++           ####  ######  ####   ####   ++
+      ++          #### ####     ##### #####    ++
+      ++    #### ####   #####  ###########     ++
+      ++   #### ####     #### #### # ####      ++
+      ++    ######   ######  ####   ####       ++
+
+      The target system seems to have Jira Service Management present.
+      If not, please report me at https://rootqc.eficode.io. I must have guessed wrong.
+
+      You most likely want to update Jira Service Management first, before proceeding to automated plugin updates.
+
+      Please log into {{ jira_proxy_scheme|default('https') }}://{{ jira_proxy_name }}/plugins/servlet/applications/versions-licenses
+       -> Click on "Update" for Jira Service Management.
+
+      The update for Jira Service Management can take up to 15 minutes.
+
+      Press Return to continue the deployment when Jira is fully up, running and functional again.
+
+- name: Include atlassian tokens tasks
+  run_once: true
+  ansible.builtin.include_tasks: atlassian_tokens.yml
+  tags:
+    - atlassian_oauth
+    - atlassian_tokens
+  when:
+    - jira_install_tokens|bool
+    - jira_include_atlassian_plugins|bool or (jira_install_plugins|bool and jira_include_atlassian_plugins|bool)
+
+- name: Install/update plugins using atlassian_plugins role
+  run_once: true
+  ansible.builtin.include_role:
+    name: atlassian_plugins
+    tasks_from: plugins_main
+  vars:
+    jira_datacenter: "{{ (jira_license_server) | ternary(false, true) }}"
+  when:
+    - jira_include_atlassian_plugins|bool
+    - jira_plugins|default([]) | length > 0

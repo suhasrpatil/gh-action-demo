@@ -1,0 +1,49 @@
+---
+
+- name: log4j2 | Read Jira Loggers
+  community.general.xml:
+    path: "{{ jira_log4j2_path }}"
+    xpath: "/Configuration/Loggers/Logger[@name='{{ item.name }}']"
+    content: attribute
+  register: xmlresp
+  loop: "{{ jira_loggers }}"
+  changed_when: false
+  ignore_errors: true
+
+- name: log4j2 | Generate list of existing loggers
+  ansible.builtin.set_fact:
+    existing_loggers: "{{ existing_loggers | default([]) + [{'name': item.item.name, 'level': item.item.level}] }}"
+  when: not item.failed
+  loop: "{{ xmlresp.results }}"
+
+- name: log4j2 | Generate list of non-existing loggers
+  ansible.builtin.set_fact:
+    nonexistent_loggers: "{{ nonexistent_loggers | default([]) + [{'name': item.item.name, 'level': item.item.level, 'ref': item.item.ref | default('console')}] }}"
+  when: item.failed
+  loop: "{{ xmlresp.results }}"
+
+- name: log4j2 | Customize logging level of existing loggers
+  community.general.xml:
+    path: "{{ jira_log4j2_path }}"
+    xpath: "/Configuration/Loggers/Logger[@name='{{ item.name }}']"
+    attribute: level
+    value: "{{ item.level }}"
+  loop: "{{ existing_loggers | default([]) }}"
+  when: existing_loggers | length > 0
+
+- name: log4j2 | Append new loggers
+  community.general.xml:
+    path: "{{ jira_log4j2_path }}"
+    xpath: "/Configuration/Loggers"
+    state: present
+    add_children:
+      - Logger:
+          name: "{{ item.name }}"
+          level: "{{ item.level }}"
+          additivity: "{{ item.additivity | default('false') }}"
+          _:
+            - AppenderRef:
+                ref: "{{ item.ref }}"
+    pretty_print: true
+  loop: "{{ nonexistent_loggers | default([]) }}"
+  when: nonexistent_loggers | length > 0

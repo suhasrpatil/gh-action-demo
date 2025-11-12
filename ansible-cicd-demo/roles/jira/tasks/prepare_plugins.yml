@@ -1,0 +1,67 @@
+- name: Plugins | Collect VMR plugin versions into a temporary dictionary
+  ansible.builtin.set_fact:
+    all_plugins: "{{ all_plugins | default([]) + [{'key': local_plugin.key, 'version': local_plugin.version | default(plugin.version), 'hosting': local_plugin.hosting | default('server' if lookup('vars', atlassian_product + '_license_server') else 'datacenter')}] }}"
+  vars:
+    search_query: "[?key=='{{ local_plugin.key }}']"
+    hosting: "[?hosting=='{{ local_plugin.hosting | default('server' if lookup('vars', atlassian_product + '_license_server') else 'datacenter') }}']"
+    plugin: "{{ vmr_version_data.plugins | json_query(search_query) | json_query(hosting) | first | default({'key': local_plugin.key, 'version': 'notfound'}) }}"
+  loop: "{{ jira_plugins | default([]) }}"
+  loop_control:
+    loop_var: local_plugin
+    label: "{{ local_plugin.key }}"
+
+- name: Plugins | Create a list of deprecated plugins on this installation
+  ansible.builtin.set_fact:
+    plugins_deprecated_note: "{{ plugins_deprecated_note | default([]) + [ddata] }}"
+  vars:
+    ddata: "{{ item.name }} ({{ item.key }}): {{ item.note }}"
+  loop: "{{ vmr_version_data.plugins_deprecated | default([]) }}"
+  loop_control:
+    label: "VMR: {{ item.name }}"
+  when: all_plugins | selectattr('key', 'eq', item.key) | list | count > 0
+
+- name: Plugins | If not found
+  ansible.builtin.set_fact:
+    plugins_not_found: "{{ (plugins_not_found | default([])) + [item.key + ' (' + item.hosting + ')'] }}"
+  loop: "{{ all_plugins }}"
+  when:
+    - all_plugins is defined
+    - item.version == "notfound"
+    - vmr_version_data.plugins_deprecated | default([]) | selectattr('key', 'eq', item.key) | list | count == 0
+
+- name: Plugins | Handle missing versions for plugins
+  when: plugins_not_found is defined or plugins_deprecated_note is defined
+  block:
+    - name: Plugins | Print missing plugins
+      ansible.builtin.debug:
+        msg:
+          - "Versions for following plugins were not found in VMR and were not defined locally:"
+          - "{{ plugins_not_found }}"
+          - "This deployment run will not install or update these plugins."
+      when: plugins_not_found | default([]) | length > 0
+      changed_when: true
+
+    - name: Plugins | Print deprecated plugins
+      ansible.builtin.debug:
+        msg:
+          - "Deprecation notices have been published for following plugins found in Ansible profile:"
+          - "{{ plugins_deprecated_note }}"
+      when: plugins_deprecated_note | default([]) | length > 0
+      changed_when: true
+
+    - name: Plugins | Offer to continue
+      ansible.builtin.pause:
+        prompt: "To skip these plugins and to continue deployment, press Return. To abort deployment, press Ctrl+C and then A."
+
+
+- name: Plugins | Wipe jira_plugins list
+  ansible.builtin.set_fact:
+    jira_plugins: []
+
+- name: Plugins | Generate jira_plugins variable for atlassian_plugins role
+  ansible.builtin.set_fact:
+    jira_plugins: "{{ jira_plugins | default([]) + [{'key': item.key, 'version': item.version, 'hosting': item.hosting}] }}"
+  loop: "{{ all_plugins }}"
+  when:
+    - all_plugins is defined
+    - item.version != "notfound"

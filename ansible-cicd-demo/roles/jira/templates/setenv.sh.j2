@@ -1,0 +1,152 @@
+#
+# If the limit of files that Jira can open is too low, it will be set to this value.
+#
+MIN_NOFILES_LIMIT=16384
+
+#
+# One way to set the JIRA HOME path is here via this variable.  Simply uncomment it and set a valid path like /jira/home.  You can of course set it outside in the command terminal.  That will also work.
+#
+JIRA_HOME="{{ jira_home_dir }}"
+
+#
+#  Occasionally Atlassian Support may recommend that you set some specific JVM arguments.  You can use this variable below to do that.
+#
+JVM_SUPPORT_RECOMMENDED_ARGS="{{ JIRA_JVM_SUPPORT_RECOMMENDED_ARGS|default("") }}"
+
+#
+#  You can use variable below to modify garbage collector settings.
+#  For Java 8 we recommend default settings
+#  For Java 11 and relatively small heaps we recommend: -XX:+UseParallelGC
+#  For Java 11 and larger heaps we recommend: -XX:+UseG1GC -XX:+ExplicitGCInvokesConcurrent
+#
+{% set large_heap=False %}
+{% set max_heap=jira_server.jvm_maximum_memory|default('4096m') %}
+# Eficode ROOT:
+# Automatically determined value based on the maximum heap size ({{ max_heap }}
+# Large heap is 8 gigabytes or more.
+{% if (max_heap|regex_search('^.*[mM]$')|lower|replace("m", "")|int) >= 8192 %}
+{% set large_heap=True %}
+{% elif (max_heap|regex_search('^.*[gG]$')|lower|replace("g", "")|int) >= 8 %}
+{% set large_heap=True %}
+{% endif %}
+{% if large_heap %}
+JVM_GC_ARGS="-XX:+UseG1GC -XX:+ExplicitGCInvokesConcurrent"
+{% else %}
+JVM_GC_ARGS="-XX:+UseParallelGC"
+{% endif %}
+
+#
+# The following 2 settings control the minimum and maximum given to the JIRA Java virtual machine.  In larger JIRA instances, the maximum amount will need to be increased.
+#
+JVM_MINIMUM_MEMORY="{{ jira_server.jvm_minimum_memory|default('1024m') }}"
+JVM_MAXIMUM_MEMORY="{{ jira_server.jvm_maximum_memory|default('4096m') }}"
+
+#
+# The following setting configures the size of JVM code cache.  A high value of reserved size allows Jira to work with more installed apps.
+#
+JVM_CODE_CACHE_ARGS='-XX:InitialCodeCacheSize=32m -XX:ReservedCodeCacheSize={{ jira_server.code_cache_size|default('1024m') }}'
+
+#
+# The following are the required arguments for Jira.
+#
+JVM_REQUIRED_ARGS='-Dlog4j2.contextSelector=org.apache.logging.log4j.core.selector.BasicContextSelector -Dlog4j2.disableJmx=true -Dlog4j2.garbagefree.threadContextMap=true -Dlog4j2.isWebapp=false -Djava.awt.headless=true -Datlassian.standalone=JIRA -Dorg.apache.jasper.runtime.BodyContentImpl.LIMIT_BUFFER=true -Dmail.mime.decodeparameters=true -Dorg.dom4j.factory=com.atlassian.core.xml.InterningDocumentFactory -Dorg.apache.catalina.connector.RECYCLE_FACADES=false'
+
+# Uncomment this setting if you want to import data without notifications
+#
+{% if not JIRA_DISABLE_NOTIFICATIONS|bool %}#{% endif %}DISABLE_NOTIFICATIONS=" -Datlassian.mail.senddisabled=true -Datlassian.mail.fetchdisabled=true -Datlassian.mail.popdisabled=true"
+
+
+
+# Disable public access
+{% if not jira_disable_public_access|bool %}#{% endif %}DISABLE_PUBLIC_ACCESS=" -Datlassian.darkfeature.public.access.disabled=true"
+
+#
+# Outbound proxy servers
+#
+{% if not JIRA_ENABLE_GLOBAL_HTTP_PROXY|default(False) %}#{% endif %}JIRA_PROXIES="$JIRA_PROXIES -Dhttp.proxyHost={{ proxies.http_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<host>') }} -Dhttp.proxyPort={{ proxies.http_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<port>') }} -Dhttps.proxyHost={{ proxies.https_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<host>') }} -Dhttps.proxyPort={{ proxies.https_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<port>') }} -Dhttp.nonProxyHosts={{ JIRA_HTTP_NON_PROXY_HOSTS|regex_replace(",","\|") }}"
+{% if not JIRA_ENABLE_GLOBAL_IMAP_PROXY|default(False) %}#{% endif %}JIRA_PROXIES="$JIRA_PROXIES -Dmail.IMAPS.proxy.host={{ proxies.http_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<host>') }} -Dmail.IMAPS.proxy.port={{ proxies.http_proxy|default("http://undef:undef")|regex_replace('^.*//(?P<host>.+):(?P<port>\\d+)$', '\\g<port>') }}"
+JVM_REQUIRED_ARGS="$JVM_REQUIRED_ARGS $JIRA_PROXIES"
+
+#
+# UPM plugin upload toggle
+#
+UPM_UPLOAD_TOGGLE="-Dupm.plugin.upload.enabled={{ JIRA_UPM_DISABLE_UPLOAD | ternary('false', 'true') }}"
+
+
+#-----------------------------------------------------------------------------------
+#
+# In general don't make changes below here
+#
+#-----------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------
+# Prevents the JVM from suppressing stack traces if a given type of exception
+# occurs frequently, which could make it harder for support to diagnose a problem.
+#-----------------------------------------------------------------------------------
+JVM_EXTRA_ARGS="-XX:-OmitStackTraceInFastThrow -Djava.locale.providers=COMPAT"
+
+CURRENT_NOFILES_LIMIT=$( ulimit -Hn )
+ulimit -Sn $CURRENT_NOFILES_LIMIT
+ulimit -n $(( CURRENT_NOFILES_LIMIT > MIN_NOFILES_LIMIT  ? CURRENT_NOFILES_LIMIT : MIN_NOFILES_LIMIT ))
+
+PRGDIR=`dirname "$0"`
+cat "${PRGDIR}"/jirabanner.txt
+
+JIRA_HOME_MINUSD=""
+if [ "$JIRA_HOME" != "" ]; then
+    echo $JIRA_HOME | grep -q " "
+    if [ $? -eq 0 ]; then
+            echo ""
+            echo "--------------------------------------------------------------------------------------------------------------------"
+                echo "   WARNING : You cannot have a JIRA_HOME environment variable set with spaces in it.  This variable is being ignored"
+            echo "--------------------------------------------------------------------------------------------------------------------"
+    else
+                JIRA_HOME_MINUSD=-Djira.home=$JIRA_HOME
+    fi
+fi
+
+JAVA_OPTS="-Xms${JVM_MINIMUM_MEMORY} -Xmx${JVM_MAXIMUM_MEMORY} ${JVM_CODE_CACHE_ARGS} ${JAVA_OPTS} ${JVM_REQUIRED_ARGS} ${DISABLE_NOTIFICATIONS} ${DISABLE_PUBLIC_ACCESS} ${UPM_UPLOAD_TOGGLE} ${JVM_SUPPORT_RECOMMENDED_ARGS} ${JVM_EXTRA_ARGS} ${JIRA_HOME_MINUSD} ${START_JIRA_JAVA_OPTS}"
+
+export JAVA_OPTS
+
+# DO NOT remove the following line
+JAVA_HOME="{{ jira_jre_home }}"; export JAVA_HOME
+
+echo ""
+echo "If you encounter issues starting or stopping Jira, please see the Troubleshooting guide at https://docs.atlassian.com/jira/jadm-docs-086/Troubleshooting+installation"
+echo ""
+if [ "$JIRA_HOME_MINUSD" != "" ]; then
+    echo "Using JIRA_HOME:       $JIRA_HOME"
+fi
+
+# set the location of the pid file
+if [ -z "$CATALINA_PID" ] ; then
+    if [ -n "$CATALINA_BASE" ] ; then
+        CATALINA_PID="$CATALINA_BASE"/work/catalina.pid
+    elif [ -n "$CATALINA_HOME" ] ; then
+        CATALINA_PID="$CATALINA_HOME"/work/catalina.pid
+    fi
+fi
+export CATALINA_PID
+
+if [ -z "$CATALINA_BASE" ]; then
+  if [ -z "$CATALINA_HOME" ]; then
+    LOGBASE=$PRGDIR
+    LOGTAIL=..
+  else
+    LOGBASE=$CATALINA_HOME
+    LOGTAIL=.
+  fi
+else
+  LOGBASE=$CATALINA_BASE
+  LOGTAIL=.
+fi
+
+PUSHED_DIR=`pwd`
+cd $LOGBASE
+cd $LOGTAIL
+LOGBASEABS=`pwd`
+cd $PUSHED_DIR
+
+echo ""
+echo "Server startup logs are located in $LOGBASEABS/logs/catalina.out"

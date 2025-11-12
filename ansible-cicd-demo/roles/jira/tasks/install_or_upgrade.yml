@@ -1,0 +1,132 @@
+---
+- name: Ensure {{ jira_install_dir }} exists and is owned by jira
+  ansible.builtin.file:
+    path: "{{ jira_install_dir }}"
+    state: directory
+    owner: jira
+    group: jira
+    mode: "0755"
+
+- name: Download installation package if needed
+  ansible.builtin.get_url:
+    url: "https://{{ eficode_artifactory.host }}/platform-remote-atlassian-software/{{ atlassian_product }}/downloads/binary/atlassian-jira-software-{{ jira_version }}.tar.gz"
+    dest: "/tmp/atlassian-{{ atlassian_product }}-{{ jira_version }}.tar.gz"
+    owner: root
+    group: root
+    mode: "0644"
+    headers:
+      Authorization: "Bearer {{ eficode_artifactory.token }}"
+    timeout: 60
+  when: not check_bindir.stat.exists
+  environment: "{{ proxies | default({}) }}"
+
+- name: Unarchive installation package # noqa risky-file-permissions
+  ansible.builtin.unarchive:
+    src: "/tmp/atlassian-{{ atlassian_product }}-{{ jira_version }}.tar.gz"
+    dest: "{{ jira_install_dir }}"
+    owner: jira
+    group: jira
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    creates: "{{ jira_install_dir }}/bin"
+
+- name: Clean up
+  ansible.builtin.file:
+    path: "/tmp/atlassian-{{ atlassian_product }}-{{ jira_version }}.tar.gz"
+    state: absent
+
+- name: Copy defined customized files from current installation to new installation
+  ansible.builtin.copy:
+    src: "{{ jira_current_dir }}/{{ item }}"
+    dest: "{{ jira_install_dir }}/{{ item }}"
+    owner: jira
+    group: jira
+    mode: preserve
+    remote_src: true
+    backup: true
+  loop: "{{ jira_customized_files }}"
+  when: upgrading
+
+- name: UPGRADE PENDING! Shut down service to start upgrade. Waiting for PID to disappear...
+  ansible.builtin.wait_for:
+    path: "/proc/{{ pidfile.stdout }}/status"
+    timeout: 300
+    sleep: 30
+    state: absent
+  when: running and pidfile is defined
+
+- name: Back up the database using dbutility role
+  run_once: true
+  when: upgrading
+  block:
+    - name: Backup is explicitly disabled
+      ansible.builtin.fail:
+        msg:
+          - "Control variable jira_upgrade_sql_backup is set to 'false', automatic backup will not be attempted."
+          - "Rerun the playbook with '-e jira_upgrade_sql_backup=true' to run backup."
+          - "Automated backup is highly recommended, unless this is a secondary cluster node deployment where the main node has already been updated."
+      when: not jira_upgrade_sql_backup|bool
+    - name: Notice for Data Center deployments
+      when:
+        - not jira_license_server|bool
+        - jira_upgrade_sql_backup|bool
+      block:
+        - name: Print a message about backups
+          ansible.builtin.debug:
+            msg:
+              - "Backup variable (jira_upgrade_sql_backup) is set to true, automated backup WILL BE attempted."
+              - "Your deployment seems to be a Jira Data Center."
+              - "This task automatically runs on only one of the nodes, so it is safe to continue."
+              - "---------------------------------------------------------------------------------"
+              - "If you have already updated the primary node in your cluster, you might want to skip the backup for secondary ones."
+              - "To skip the backup, rerun the playbook with '-e jira_upgrade_sql_backup=false'."
+          changed_when: true
+        - name: Sleep 5 seconds and proceed to autobackup
+          ansible.builtin.wait_for:
+            timeout: 5
+
+    - name: Include dbutility role
+      ansible.builtin.include_role:
+        name: dbutility
+        tasks_from: backup
+      vars:
+        db_type: "{{ jira_db.type }}"
+        db_host: "{{ jira_db.host }}"
+        db_database: "{{ jira_db.db }}"
+        db_username: "{{ jira_db.user }}"
+        db_password: "{{ jira_db.password }}"
+        db_version: "{{ jira_db.version | default('') }}"
+        backup_dir: "{{ jira_upgrade_sql_backup_dir }}"
+        backup_filename: "{{ jira_db.db }}-{{ ansible_date_time.iso8601_basic_short }}-{{ jira_db.type }}.sql"
+  rescue:
+    - name: Print error message in case of failure.
+      ansible.builtin.debug:
+        msg: "Automated SQL backup of application database is either disabled or the automated backup has failed. Pausing deployment to allow for manual backup."
+    - name: Confirm manual backup.
+      ansible.builtin.pause:
+        prompt: "Confirm when you are ready to proceed. Press Return to continue; Ctrl+C and then 'A' to abort the deployment."
+
+- name: Ensure symlink to an external JRE exists to avoid using the Atlassian supplied one (if any)
+  ansible.builtin.file:
+    src: "{{ jira_jre_home }}"
+    dest: "{{ jira_install_dir }}/jre"
+    state: link
+
+- name: Update "current" symlink to point to installed version
+  ansible.builtin.file:
+    src: "{{ jira_install_dir }}"
+    dest: "{{ jira_current_dir }}"
+    force: true
+    state: link
+
+- name: Download MySQL connector from platform-binaries in Efiartifactory
+  ansible.builtin.get_url:
+    url: "https://{{ eficode_artifactory.host }}/platform-binaries/mysql-connector-java/mysql-connector-java-{{ jira_mysql_connector_version }}-bin.jar"
+    dest: "{{ jira_install_dir }}/lib/mysql-connector-java-{{ jira_mysql_connector_version }}-bin.jar"
+    headers:
+      X-JFrog-Art-Api: "{{ eficode_artifactory.key }}"
+    owner: jira
+    group: jira
+    mode: "0644"
+  environment: "{{ proxies | default({}) }}"
+  when: jira_db.type == "mysql" or jira_add_mysql_connector

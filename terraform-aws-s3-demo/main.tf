@@ -21,6 +21,7 @@ provider "aws" {
 
 resource "aws_s3_bucket" "my_demo_bucket" {
   bucket = "suhas-github-actions-demo-bucket-2025-07-26-xyz12"
+  #  acl    = "private"  validation error
   tags = {
     Name        = "GitHubActionsDemoBucket1"
     Environment = "Dev"
@@ -55,13 +56,13 @@ output "bucket_arn" {
   value       = aws_s3_bucket.my_demo_bucket.arn
 }
 
-# resource "aws_instance" "bad_example" {
-#   ami           = "ami-123456"
-#   instance_type = "t3.nano-bad" # invalid instance type
-#   tags = {
-#     Name = "MissingRequiredTags"
-#   }
-# }
+resource "aws_instance" "bad_example" {
+  ami           = "ami-123456"
+  instance_type = "t3.nano-bad" # invalid instance type
+  tags = {
+    Name = "MissingRequiredTags"
+  }
+}
 
 # resource "random_password" "password" {
 #   length           = 16

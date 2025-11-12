@@ -1,0 +1,26 @@
+db_backed_up: false
+installed: false
+jsm_installed: false
+running: false
+upgrading: false
+
+jira_required_ansible_version: '2.15' # Needs to be string
+
+jira_mandatory_vars:
+  - env_java_home
+
+  - atlassian_app_dir
+  - atlassian_backup_dir
+  - atlassian_data_dir
+  - atlassian_log_dir
+
+  - jira_version
+  - jira_proxy_name
+
+  - jira_db.type
+  - jira_db.host
+  - jira_db.db
+  - jira_db.user
+  - jira_db.password
+
+vmr_application_name: "{{ jira_license_server | ternary('jira_server', 'jira') }}"

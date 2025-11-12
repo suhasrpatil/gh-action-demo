@@ -1,0 +1,36 @@
+---
+- name: Ensure main directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    mode: "0755"
+  loop:
+    - "{{ atlassian_data_dir }}"
+    - "{{ atlassian_backup_dir }}"
+    - "{{ atlassian_log_dir }}"
+    - "{{ atlassian_app_dir }}"
+
+- name: Ensure JIRA user account exists with UID {{ atlassian_jira_uid | default('11444') }}
+  ansible.builtin.user:
+    uid: "{{ atlassian_jira_uid | default('11444') }}"
+    name: jira
+    shell: /bin/bash
+    state: present
+
+- name: Ensure JIRA pansible.builtin.include_roleroduct directory placeholders exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: jira
+    group: jira
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ atlassian_data_dir }}/jira/home", mode: '0750' }
+    - { path: "{{ atlassian_app_dir }}/jira", mode: '0755' }
+
+- name: Ensure JIRA home directory symlink exists
+  ansible.builtin.file:
+    src: "{{ atlassian_data_dir }}/jira/home"
+    dest: "{{ atlassian_app_dir }}/jira/home"
+    state: link
