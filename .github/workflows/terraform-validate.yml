@@ -11,11 +11,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        working-directory: ./terraform-aws-s3-demo/
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
+        working-directory: ./terraform-aws-s3-demo/
 
       - name: Terraform Format Check
         id: fmt
@@ -24,6 +26,7 @@ jobs:
       - name: Terraform Init
         id: init
         run: terraform init
+        working-directory: ./terraform-aws-s3-demo/
 
       - name: Terraform Validate
         id: validate
