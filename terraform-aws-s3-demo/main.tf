@@ -56,13 +56,13 @@ output "bucket_arn" {
   value       = aws_s3_bucket.my_demo_bucket.arn
 }
 
- resource "aws_instance" "bad_example" {
-   ami           = "ami-123456"
-   instance_type = "t3.nano-bad" # invalid instance type
-   tags = {
-     Name = "MissingRequiredTags"
-   }
- }
+resource "aws_instance" "bad_example" {
+  ami           = "ami-123456"
+  instance_type = "t3.nano-bad" # invalid instance type
+  tags = {
+    Name = "MissingRequiredTags"
+  }
+}
 
 # resource "random_password" "password" {
 #   length           = 16
